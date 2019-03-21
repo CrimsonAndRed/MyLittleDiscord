@@ -1,0 +1,10 @@
+[package]
+name = "my_little_discord"
+version = "0.1.0"
+authors = ["CrimsonAndRed <homa-alternativa@mail.ru>"]
+edition = "2018"
+
+[dependencies]
+reqwest = "0.9.11"
+log4rs = "0.8.1"
+log = "0.4"

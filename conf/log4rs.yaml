@@ -1,0 +1,24 @@
+appenders:
+  cons:
+    kind: console
+    encoder:
+      kind: pattern
+      pattern: "{d(%d-%m-%Y %H:%M:%S)} {I:<7} {l:<5} [{M}]->{f}::{L} {m}{n}"
+  file:
+    kind: file
+    path: "log/logs.log"
+    encoder:
+      pattern: "{d(%d-%m-%Y %H:%M:%S)} {I:<7} {l:<5} [{M}]->{f}::{L} {m}{n}"
+root:
+  level: warn
+  appenders:
+    - cons
+    - file
+
+loggers:
+  my_little_discord:
+    level: debug
+    appenders:
+      - cons
+      - file
+    additive: false
