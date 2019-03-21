@@ -1,7 +1,7 @@
 extern crate reqwest;
 extern crate log4rs;
 
-use log::{info, error, debug};
+use log::{info, debug};
 
 const EXPECTED_ARGUMENTS: usize = 2;
 
