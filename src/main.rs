@@ -16,10 +16,6 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let mut resp = web::connector::CONN
         .get("https://discordapp.com/api/v6/users/@me/guild")?;
 
-    info!("{:?}", p);
     info!("{}", &resp.text()?);
-    debug!("Status is {}", &resp.status());
-    info!("---");
-    info!("{:?}", &resp.headers());
     Ok(())
 }
