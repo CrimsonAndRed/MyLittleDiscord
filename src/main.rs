@@ -21,11 +21,10 @@ fn main() -> Result<(), Box<std::error::Error>> {
     log4rs::init_file("conf/log4rs.yaml", Default::default())?;
 
     let p: &data::Pool = &data::POOL;
-
-    let mut resp = web::connector::CONN.get("https://discordapp.com/api/v6/users/@me/guild")?;
-
-    info!("{}", &resp.text()?);
-    //--
+//
+//    let mut resp = web::connector::CONN.get("https://discordapp.com/api/v6/users/@me/guild")?;
+//
+//    info!("{}", &resp.text()?);
 
     let mut runtime = tokio::runtime::current_thread::Builder::new()
         .build()
@@ -37,22 +36,19 @@ fn main() -> Result<(), Box<std::error::Error>> {
         .async_connect_secure(None)
         .and_then(|(duplex, _)| {
             let (sink, stream) = duplex.split();
-            // Might be better to use something like Actix here and register sender and reciever actors
-            stream
-                .filter_map(|message| {
-                    let paniced = std::panic::catch_unwind(|| engine::on_discord_message(message));
 
-                    match paniced {
-                        Ok(msg) => msg,
-                        Err(e) => {
-                            error!("Program failed:\n{:?}\nClosing connection and die.", e);
-                            Some(OwnedMessage::Close(None))
-                        }
-                    }
+			let mut server = engine::MyLittleServer {
+//				sink: &sink,
+				last_sequence: None
+			};
+
+            // Might be better to use something like Actix here and register sender and receiver actors
+            stream
+                .filter_map(move |message| {
+                    server.on_discord_message(message)
                 })
                 .forward(sink)
         });
-    //--
     runtime.block_on(runner).unwrap();
     Ok(())
 }

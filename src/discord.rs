@@ -3,37 +3,73 @@ use std::collections::HashMap;
 
 use std::convert::From;
 
+/// General response from DISCORD.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MessagePacket {
+    // OpCode as u8
     pub op: u8,
+    // Any internal data
     pub d: serde_json::Value,
+    // Session number
     pub s: Option<i64>,
+    // Event name
     pub t: Option<String>,
 }
 
 /// First response from Discord WebSocket.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HelloPacket {
-    heartbeat_interval: u64,
-    _trace: Vec<String>,
+    // Heartbeat interval in milliseconds
+    pub heartbeat_interval: u64,
+    // Some meta information from DISCORD.
+    pub _trace: Vec<String>,
+}
+
+/// Heartbeat packet to maintain connection to DISCORD.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HeartbeatPacket {
+    // OpCode - shounld be 1
+    pub op: u8,
+    // last s received by me
+    pub d: Option<i64>,
+}
+
+/// Packet to indetify myself to DISCORD.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct IdentityPacket {
+    // My secret
+    pub token: String,
+    // Some properties
+    pub properties: IdentityPropertiesPacket,
+    // Whether this connection supports compression of packets
+    pub compress: Option<bool>,
+    // Offline members of guild threshold
+    pub large_threshold: Option<u64>,
+    // Something to deal with extra large bots
+    pub shard: Option<Vec<u64>>,
+    // My status
+    pub presence: Option<UpdateStatusPacket>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct IdentityPacket {
-    token: String,
-    properties: HashMap<String, String>,
-    compress: Option<bool>,
-    large_threshold: Option<u64>,
-    shard: Option<Vec<u64>>,
-    presence: UpdateStatusPacket,
+pub struct IdentityPropertiesPacket {
+    #[serde(alias = "$os")]
+    pub os: Option<String>,
+
+    #[serde(alias = "$browser")]
+    pub browser: Option<String>,
+
+    #[serde(alias = "$device")]
+    pub device: Option<String>,
+
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateStatusPacket {
-    since: Option<u64>,
-    game: Option<HashMap<String, String>>, // TODO struct
-    status: Status,
-    afk: bool,
+    pub since: Option<u64>,
+    pub game: Option<HashMap<String, String>>, // TODO struct
+    pub status: Status,
+    pub afk: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -45,6 +81,7 @@ pub enum Status {
     Offline,
 }
 
+/// Opcodes of DISOCRD protocol.
 #[derive(Debug)]
 pub enum OpCode {
     Dispatch,
@@ -60,6 +97,7 @@ pub enum OpCode {
     HeartbeatACK,
 }
 
+// Some converters for OpCode
 impl Into<u8> for OpCode {
     fn into(self) -> u8 {
         match self {
