@@ -9,15 +9,14 @@ extern crate websocket;
 
 use log::{debug, info};
 use futures::future::Future;
-use futures::sink::Sink;
 use futures::stream::Stream;
-use websocket::result::WebSocketError;
-use websocket::{ClientBuilder, OwnedMessage};
+use websocket::{ClientBuilder};
 
 
-
+mod engine;
 mod data;
 mod web;
+mod discord;
 
 fn main() -> Result<(), Box<std::error::Error>> {
     log4rs::init_file("conf/log4rs.yaml", Default::default())?;
@@ -40,14 +39,11 @@ fn main() -> Result<(), Box<std::error::Error>> {
 		.async_connect_secure(None)
 		.and_then(|(duplex, _)| {
 			let (sink, stream) = duplex.split();
+            // Might be better to use something like Actix here and register sender and reciever actors
+            // Stupid code now
 			stream
 				.filter_map(|message| {
-					info!("Received Message: {:?}", message);
-				    match message {
-						OwnedMessage::Close(e) => Some(OwnedMessage::Close(e)),
-						OwnedMessage::Ping(d) => Some(OwnedMessage::Pong(d)),
-						_ => None,
-					}
+                    engine::on_discord_message(message)
 				})
 				.forward(sink)
 		});

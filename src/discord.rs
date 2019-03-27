@@ -1,35 +1,94 @@
-use serde::{Deserialize, Serialize}
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+use std::convert::From;
 
 /// First response from Discord WebSocket.
 #[derive(Debug, Serialize, Deserialize)]
-struct HelloPacket {
+pub struct HelloPacket {
     heartbeat_interval: u64,
     _trace: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct IdentityPacket {
+pub struct IdentityPacket {
     token: String,
-    properties: Map<String, String>,
+    properties: HashMap<String, String>,
     compress: Option<bool>,
     large_threshold: Option<u64>,
     shard: Option<Vec<u64>>,
-    presence: 
+    presence: UpdateStatusPacket
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct UpdateStatusPacket {
+pub struct UpdateStatusPacket {
     since: Option<u64>,
-    game: Option<Map<String, String>>, // TODO struct
+    game: Option<HashMap<String, String>>, // TODO struct
     status: Status,
     afk: bool,
 }
 
-#[derive(Serialize, Deserialize)]
-enum Status {
-    Online = "online",
-    Dnd = "dnd",
-    Idle = "idle",
-    invisible = "invisible",
-    Offline = "offline",
+#[derive(Debug, Serialize, Deserialize)]
+pub enum Status {
+    Online,
+    Dnd,
+    Idle,
+    Invisible,
+    Offline,
+}
+
+
+#[derive(Debug)]
+pub enum OpCode {
+    Dispatch,
+    Heartbeat,
+    Identify,
+    StatusUpdate,
+    VoiceStateUpdate,
+    Resume,
+    Reconnect,
+    RequestGuildMembers,
+    InvalidSession,
+    Hello,
+    HeartbeatACK,
+}
+
+impl Into<u8> for OpCode {
+    fn into(self) -> u8 {
+        match self {
+            OpCode::Dispatch => 0,
+            OpCode::Heartbeat => 1,
+            OpCode::Identify => 2,
+            OpCode::StatusUpdate => 3,
+            OpCode::VoiceStateUpdate => 4,
+            OpCode::Resume => 6,
+            OpCode::Reconnect => 7,
+            OpCode::RequestGuildMembers => 8,
+            OpCode::InvalidSession => 9,
+            OpCode::Hello => 10,
+            OpCode::HeartbeatACK => 11,
+            _ => unreachable!("Enum <OpCode> failed to serialize to u8")
+        }
+    }
+}
+
+// Has to bee TryFrom, but it is unstable???
+impl From<u8> for OpCode {
+
+    fn from(value: u8) -> Self {
+        match value {
+            0	=> OpCode::Dispatch,
+            1	=> OpCode::Heartbeat,
+            2	=> OpCode::Identify,
+            3	=> OpCode::StatusUpdate,
+            4	=> OpCode::VoiceStateUpdate,
+            6	=> OpCode::Resume,
+            7	=> OpCode::Reconnect,
+            8	=> OpCode::RequestGuildMembers,
+            9	=> OpCode::InvalidSession,
+            10	=> OpCode::Hello,
+            11	=> OpCode::HeartbeatACK,
+            _   => panic!("Unknown number for OpCode {}", value)
+        }
+    }
 }
