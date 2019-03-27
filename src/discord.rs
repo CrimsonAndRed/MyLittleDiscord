@@ -3,6 +3,14 @@ use std::collections::HashMap;
 
 use std::convert::From;
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MessagePacket {
+    pub op: u8,
+    pub d: serde_json::Value,
+    pub s: Option<i64>,
+    pub t: Option<String>,
+}
+
 /// First response from Discord WebSocket.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HelloPacket {
@@ -17,7 +25,7 @@ pub struct IdentityPacket {
     compress: Option<bool>,
     large_threshold: Option<u64>,
     shard: Option<Vec<u64>>,
-    presence: UpdateStatusPacket
+    presence: UpdateStatusPacket,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,7 +44,6 @@ pub enum Status {
     Invisible,
     Offline,
 }
-
 
 #[derive(Debug)]
 pub enum OpCode {
@@ -67,28 +74,26 @@ impl Into<u8> for OpCode {
             OpCode::InvalidSession => 9,
             OpCode::Hello => 10,
             OpCode::HeartbeatACK => 11,
-            _ => unreachable!("Enum <OpCode> failed to serialize to u8")
         }
     }
 }
 
 // Has to bee TryFrom, but it is unstable???
 impl From<u8> for OpCode {
-
     fn from(value: u8) -> Self {
         match value {
-            0	=> OpCode::Dispatch,
-            1	=> OpCode::Heartbeat,
-            2	=> OpCode::Identify,
-            3	=> OpCode::StatusUpdate,
-            4	=> OpCode::VoiceStateUpdate,
-            6	=> OpCode::Resume,
-            7	=> OpCode::Reconnect,
-            8	=> OpCode::RequestGuildMembers,
-            9	=> OpCode::InvalidSession,
-            10	=> OpCode::Hello,
-            11	=> OpCode::HeartbeatACK,
-            _   => panic!("Unknown number for OpCode {}", value)
+            0 => OpCode::Dispatch,
+            1 => OpCode::Heartbeat,
+            2 => OpCode::Identify,
+            3 => OpCode::StatusUpdate,
+            4 => OpCode::VoiceStateUpdate,
+            6 => OpCode::Resume,
+            7 => OpCode::Reconnect,
+            8 => OpCode::RequestGuildMembers,
+            9 => OpCode::InvalidSession,
+            10 => OpCode::Hello,
+            11 => OpCode::HeartbeatACK,
+            _ => panic!("Unknown number for OpCode {}", value),
         }
     }
 }
