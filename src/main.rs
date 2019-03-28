@@ -3,14 +3,15 @@ extern crate reqwest;
 extern crate serde;
 extern crate serde_json;
 
+extern crate actix;
+extern crate actix_web;
 extern crate futures;
-extern crate tokio;
-extern crate websocket;
 
-use futures::future::Future;
-use futures::stream::Stream;
 use log::{debug, error, info};
-use websocket::{ClientBuilder, OwnedMessage};
+use actix_web::ws::{Client, ClientWriter, Message, ProtocolError};
+use actix::*;
+use crate::engine::MyLittleConnection;
+use futures::Future;
 
 mod data;
 mod discord;
@@ -26,29 +27,27 @@ fn main() -> Result<(), Box<std::error::Error>> {
 //
 //    info!("{}", &resp.text()?);
 
-    let mut runtime = tokio::runtime::current_thread::Builder::new()
-        .build()
-        .unwrap();
     debug!("Connecting to {}", &p.wss_ref);
 
-    let runner = ClientBuilder::new(&p.wss_ref)
-        .unwrap()
-        .async_connect_secure(None)
-        .and_then(|(duplex, _)| {
-            let (sink, stream) = duplex.split();
+    let sys = actix::System::new("my-little-discord");
 
-			let mut server = engine::MyLittleServer {
-//				sink: &sink,
-				last_sequence: None
-			};
+    Arbiter::spawn(
+        Client::new(&p.wss_ref)
+            .connect()
+            .map_err(|e| {
+                error!("Something bad happened: {}", e);
+                ()
+            })
+            .map(|(reader, writer)| {
+                let addr = MyLittleConnection::create(|ctx| {
+                    MyLittleConnection::add_stream(reader, ctx);
+                    MyLittleConnection{writer, last_sequence: None}
+                });
 
-            // Might be better to use something like Actix here and register sender and receiver actors
-            stream
-                .filter_map(move |message| {
-                    server.on_discord_message(message)
-                })
-                .forward(sink)
-        });
-    runtime.block_on(runner).unwrap();
+                ()
+            }),
+    );
+
+    let _ = sys.run();
     Ok(())
 }
