@@ -1,4 +1,4 @@
-use log::{debug, info, error};
+use log::{debug, info, error, warn};
 
 use crate::discord::MessagePacket;
 use crate::discord::OpCode;
@@ -8,82 +8,6 @@ use crate::discord::IdentityPropertiesPacket;
 use actix_web::ws::{Client, ClientWriter, Message, ProtocolError};
 use actix::*;
 
-/// Internal engine that handles DISCORD messages.
-pub struct MyLittleConnection {
-
-    pub writer: ClientWriter,
-
-    pub last_sequence: Option<i64>,
-}
-
-#[derive(Message)]
-pub struct ClientCommand(String);
-
-impl Actor for MyLittleConnection {
-    type Context = Context<Self>;
-
-    fn started(&mut self, ctx: &mut Context<Self>) {
-        debug!("Started MyLittleConnection");
-    }
-
-    fn stopped(&mut self, ctx: &mut Context<Self>) {
-        debug!("Stopped MyLittleConnection");
-    }
-}
-
-impl StreamHandler<Message, ProtocolError> for MyLittleConnection {
-    fn handle(&mut self, msg: Message, ctx: &mut Context<Self>) {
-        match msg {
-            Message::Text(txt) => info!("Got msg\n{:?}", txt),
-            _ => (),
-        }
-    }
-
-    fn started(&mut self, ctx: &mut Context<Self>) {
-        debug!("Connected");
-    }
-
-    fn finished(&mut self, ctx: &mut Context<Self>) {
-        debug!("Finished");
-        System::current().stop(); // TODO move to switch WSSMessage type on close
-    }
-}
-
-impl Handler<ClientCommand> for MyLittleConnection {
-    type Result = ();
-
-    fn handle(&mut self, msg: ClientCommand, ctx: &mut Context<Self>) {
-        debug!("Got message\n{:?}", msg.0);
-    }
-}
-
-//impl MyLittleConnection {
-//
-//    pub fn on_discord_message(&mut self, message: OwnedMessage) -> Option<OwnedMessage> {
-//
-//        match message {
-//            OwnedMessage::Close(e) => {
-//                info!("Received close message from DISCORD");
-//                Some(OwnedMessage::Close(e))
-//            }
-//            OwnedMessage::Ping(d) => {
-//                info!("Received pong message from DISCORD");
-//                Some(OwnedMessage::Pong(d))
-//            }
-//            OwnedMessage::Text(text) => {
-//                info!("Received text message from DISCORD");
-//                self.on_text_message(text)
-//            }
-//            OwnedMessage::Binary(_) => {
-//                info!("Received binary message from DISCORD. Skipping.");
-//                None
-//            }
-//            OwnedMessage::Pong(_) => {
-//                info!("Received pong message from DISCORD. Skipping.");
-//                None
-//            }
-//        }
-//    }
 //
 //    fn on_text_message(&mut self, message: String) -> Option<OwnedMessage> {
 //        debug!("Received message {:?}", &message);

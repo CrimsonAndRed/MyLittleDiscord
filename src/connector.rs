@@ -1,0 +1,119 @@
+use log::{debug, info, error, warn};
+
+use crate::discord::MessagePacket;
+use crate::discord::OpCode;
+use crate::data::POOL;
+use crate::discord::IdentityPacket;
+use crate::discord::IdentityPropertiesPacket;
+use actix_web::ws::{Client, ClientWriter, Message, ProtocolError};
+use actix_web::client;
+use actix::*;
+
+
+/// Internal engine that handles DISCORD messages.
+pub struct MyLittleConnection {
+
+    pub writer: ClientWriter,
+
+    pub last_sequence: Option<i64>,
+}
+
+#[derive(Message)]
+pub struct ClientCommand(String);
+
+impl Actor for MyLittleConnection {
+    type Context = Context<Self>;
+
+    fn started(&mut self, ctx: &mut Context<Self>) {
+        debug!("Started MyLittleConnection");
+    }
+
+    fn stopped(&mut self, ctx: &mut Context<Self>) {
+        debug!("Stopped MyLittleConnection");
+    }
+}
+
+impl StreamHandler<Message, ProtocolError> for MyLittleConnection {
+    fn handle(&mut self, msg: Message, ctx: &mut Context<Self>) {
+        match msg {
+            Message::Text(txt) => info!("Got msg\n{:?}", txt),
+            Message::Close(e) => {
+                warn!("Received close message from DISCORD, with reason {:?}", &e);
+                warn!("Closing connection and exitting");
+                // self.writer.close(e);
+                // Do we need to wait??
+                System::current().stop();
+            }
+            Message::Ping(d) => {
+                info!("Received ping message from DISCORD, with text {}", &d);
+                info!("Responding with pong with same text");
+                self.writer.pong(&d);
+            }
+            Message::Binary(_) => {
+                info!("Received binary message from DISCORD. Skipping.");
+            }
+            Message::Pong(_) => {
+                info!("Received pong message from DISCORD. Skipping.");
+            }
+        }
+    }
+
+    fn started(&mut self, ctx: &mut Context<Self>) {
+        debug!("Connected");
+    }
+
+    fn finished(&mut self, ctx: &mut Context<Self>) {
+        debug!("Finished");
+    }
+}
+
+impl Handler<ClientCommand> for MyLittleConnection {
+    type Result = ();
+
+    fn handle(&mut self, msg: ClientCommand, ctx: &mut Context<Self>) {
+        debug!("Got message\n{:?}", msg.0);
+    }
+}
+
+
+
+//---
+//
+//struct RequestConnector {
+//    key_header: String,
+//}
+//
+//impl Actor for RequestConnector {
+//    type Context = Context<Self>;
+//}
+//
+///// Sync
+//impl Handler<RequestMessage> for RequestConnector {
+//    type Result = Result<ClientResponse, SendRequestError>;
+//
+//    fn handle(&mut self, msg: RequestMessage, ctx: &mut Context<Self>) -> Self::Result {
+//        client::get(msg.url)
+//            .header("authorization", self.key_header.to_string())
+//            .finish()
+//            .unwrap()
+//            .send()
+//            .wait() //??? does not work
+//    }
+//}
+//
+//struct RequestMessage {
+//    method: HttpMethod,
+//    url: String,
+//    data: String, //??? TODO
+//}
+//
+//impl Message for RequestMessage {
+//    type Result = Result<ClientResponse, SendRequestError>;
+//}
+//
+//enum HttpMethod {
+//    GET,
+//    POST,
+//    PUT,
+//    DELETE
+//}

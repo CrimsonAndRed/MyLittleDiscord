@@ -9,13 +9,13 @@ extern crate futures;
 use log::{debug, error, info};
 use actix_web::ws::{Client, ClientWriter, Message, ProtocolError};
 use actix::*;
-use crate::engine::MyLittleConnection;
+use crate::connector::MyLittleConnection;
 use futures::Future;
 
 mod data;
 mod discord;
 mod engine;
-mod web;
+mod connector;
 
 fn main() -> Result<(), Box<std::error::Error>> {
     let sys = actix::System::new("my-little-discord");
