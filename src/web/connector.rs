@@ -1,38 +1,46 @@
-extern crate lazy_static;
-use lazy_static::lazy_static;
-
 use super::super::data::POOL;
 use log::{debug, error};
 
-lazy_static! {
-    pub static ref CONN: Connector = Connector {
-        client: reqwest::Client::new(),
-        header_auth: "Bot ".to_string() + &POOL.key,
-    };
+use actix::*;
+use actix_web::client;
+use actix_web::client::{ClientResponse, SendRequestError};
+use futures::Future;
+
+struct RequestConnector {
+    key_header: String,
 }
 
-pub struct Connector {
-    client: reqwest::Client,
-    header_auth: String,
+impl Actor for RequestConnector {
+    type Context = Context<Self>;
 }
 
-impl Connector {
-    pub fn get(&self, path: &str) -> reqwest::Result<reqwest::Response> {
-        let log_text = format!("Connected to address \"{}\"", path);
-        let resp = self
-            .client
-            .get(path)
-            .header(reqwest::header::AUTHORIZATION, &self.header_auth[..])
-            .send();
-        match resp.as_ref() {
-            Ok(msg) => {
-                debug!("{}{}", log_text, "Succeded");
-                debug!("Status is {}", &msg.status());
-            }
-            Err(e) => {
-                error!("{}{}{}", log_text, "Failed: ", &e);
-            }
-        };
-        return resp;
+/// Sync
+impl Handler<RequestMessage> for RequestConnector {
+    type Result = Result<ClientResponse, SendRequestError>;
+
+    fn handle(&mut self, msg: RequestMessage, ctx: &mut Context<Self>) -> Self::Result {
+        client::get(msg.url)
+            .header("authorization", self.key_header.to_string())
+            .finish()
+            .unwrap()
+            .send()
+            .wait()
     }
+}
+
+struct RequestMessage {
+    method: HttpMethod,
+    url: String,
+    data: String, //??? TODO
+}
+
+impl Message for RequestMessage {
+    type Result = Result<ClientResponse, SendRequestError>;
+}
+
+enum HttpMethod {
+    GET,
+    POST,
+    PUT,
+    DELETE
 }

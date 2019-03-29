@@ -1,9 +1,4 @@
 use log::{debug, info, error};
-//use websocket::OwnedMessage;
-//use futures::stream::SplitSink;
-//use websocket::client::r#async::{Framed, TlsStream, TcpStream};
-//use websocket::codec::ws::MessageCodec;
-//use futures::Sink;
 
 use crate::discord::MessagePacket;
 use crate::discord::OpCode;
@@ -50,6 +45,7 @@ impl StreamHandler<Message, ProtocolError> for MyLittleConnection {
 
     fn finished(&mut self, ctx: &mut Context<Self>) {
         debug!("Finished");
+        System::current().stop(); // TODO move to switch WSSMessage type on close
     }
 }
 

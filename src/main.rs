@@ -1,5 +1,4 @@
 extern crate log4rs;
-extern crate reqwest;
 extern crate serde;
 extern crate serde_json;
 
@@ -19,19 +18,23 @@ mod engine;
 mod web;
 
 fn main() -> Result<(), Box<std::error::Error>> {
-    log4rs::init_file("conf/log4rs.yaml", Default::default())?;
-
-    let p: &data::Pool = &data::POOL;
-//
-//    let mut resp = web::connector::CONN.get("https://discordapp.com/api/v6/users/@me/guild")?;
-//
-//    info!("{}", &resp.text()?);
-
-    debug!("Connecting to {}", &p.wss_ref);
-
     let sys = actix::System::new("my-little-discord");
 
-    Arbiter::spawn(
+    log4rs::init_file("conf/log4rs.yaml", Default::default())?;
+
+    debug!("Starting arbiter");
+
+    Arbiter::spawn( {
+        debug!("Trying to create pool");
+        let p: &data::Pool = &data::POOL;
+        debug!("Done with pool");
+        //
+        //    let mut resp = web::connector::CONN.get("https://discordapp.com/api/v6/users/@me/guild")?;
+        //
+        //    info!("{}", &resp.text()?);
+
+        debug!("Connecting to {}", &p.wss_ref);
+
         Client::new(&p.wss_ref)
             .connect()
             .map_err(|e| {
@@ -41,11 +44,12 @@ fn main() -> Result<(), Box<std::error::Error>> {
             .map(|(reader, writer)| {
                 let addr = MyLittleConnection::create(|ctx| {
                     MyLittleConnection::add_stream(reader, ctx);
-                    MyLittleConnection{writer, last_sequence: None}
+                    MyLittleConnection { writer, last_sequence: None }
                 });
 
                 ()
-            }),
+            })
+        }
     );
 
     let _ = sys.run();
