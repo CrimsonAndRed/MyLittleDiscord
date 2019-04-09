@@ -34,7 +34,7 @@ pub struct HeartbeatPacket {
     pub d: Option<i64>,
 }
 
-/// Packet to indetify myself to DISCORD.
+/// Packet to identify myself to DISCORD.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IdentityPacket {
     // My secret
