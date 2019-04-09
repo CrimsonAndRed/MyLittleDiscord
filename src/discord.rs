@@ -61,7 +61,6 @@ pub struct IdentityPropertiesPacket {
 
     #[serde(alias = "$device")]
     pub device: Option<String>,
-
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -1,14 +1,13 @@
-use log::{debug, info, error, warn};
+use log::{debug, error, info, warn};
 
-use crate::discord::MessagePacket;
-use crate::discord::OpCode;
 use crate::data::POOL;
 use crate::discord::IdentityPacket;
 use crate::discord::IdentityPropertiesPacket;
-use actix_web::ws::{Client, ClientWriter, Message, ProtocolError};
+use crate::discord::MessagePacket;
+use crate::discord::OpCode;
 use actix::*;
+use actix_web::ws::{Client, ClientWriter, Message, ProtocolError};
 
-//
 //    fn on_text_message(&mut self, message: String) -> Option<OwnedMessage> {
 //        debug!("Received message {:?}", &message);
 //
