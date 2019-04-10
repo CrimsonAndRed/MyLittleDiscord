@@ -51,9 +51,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 ()
             })
             .map(|(reader, writer)| {
-                let addr = MyLittleConnection::create(|ctx| {
-                    MyLittleConnection::add_stream(reader, ctx);
-                    MyLittleConnection {
+                let addr = WssConnector::create(|ctx| {
+                    WssConnector::add_stream(reader, ctx);
+                    WssConnector {
                         writer,
                         last_sequence: None,
                     }
@@ -69,6 +69,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
     Ok(())
 }
 
+/// Manually register SystemService in Registry pool
+/// All SystemServices have to implement Default, which is messing with complex actors.
+/// So all of actors are created manually and then are registered via this function.
 fn register_actor<A: SystemService>(actor: A) -> Addr<A> {
     let addr = actor.start();
     System::current().registry().set(addr.clone());

@@ -9,19 +9,19 @@ use crate::discord::MessagePacket;
 use crate::engine::*;
 
 /// Internal engine that handles DISCORD messages.
-pub struct MyLittleConnection {
+pub struct WssConnector {
     pub writer: ClientWriter,
 
     pub last_sequence: Option<i64>,
 }
 
-impl Default for MyLittleConnection {
+impl Default for WssConnector {
     fn default() -> Self {
         unimplemented!("This should never happen. All actors are started manually")
     }
 }
 
-impl Actor for MyLittleConnection {
+impl Actor for WssConnector {
     type Context = Context<Self>;
 
     fn started(&mut self, ctx: &mut Context<Self>) {
@@ -35,13 +35,13 @@ impl Actor for MyLittleConnection {
 
 // Wow i spent so much time figuring out how to put addresses to special pool
 // But it seems like already implemented feature in actix
-// I have to play with Default though, maybe there is a way to avoid implementing Default when a construct all my actors manually?
-// I also like that official user guide ignores registies.
-impl actix::Supervised for MyLittleConnection {}
-impl SystemService for MyLittleConnection {}
+// I have to play with Default though, maybe there is a way to avoid implementing Default when i construct all my actors manually?
+// I also like that official user guide ignores registries.
+impl actix::Supervised for WssConnector {}
+impl SystemService for WssConnector {}
 
 
-impl StreamHandler<Message, ProtocolError> for MyLittleConnection {
+impl StreamHandler<Message, ProtocolError> for WssConnector {
     fn handle(&mut self, msg: Message, ctx: &mut Context<Self>) {
         match msg {
             Message::Text(txt) => {
@@ -151,7 +151,7 @@ impl actix::Message for ClientMessage {
     type Result = Result<(), actix_web::error::Error>;
 }
 
-impl Handler<ClientMessage> for MyLittleConnection {
+impl Handler<ClientMessage> for WssConnector {
     type Result = Result<(), actix_web::error::Error>;
 
     fn handle(&mut self, mut msg: ClientMessage, ctx: &mut Context<Self>) -> Self::Result {
