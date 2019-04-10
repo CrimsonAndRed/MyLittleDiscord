@@ -37,7 +37,6 @@ fn main() -> Result<(), Box<std::error::Error>> {
         url: "https://discordapp.com/api/v6/users/@me/guilds".to_owned(),
         data: None,
     });
-    debug!("{:?}", System::current().registry());
     let res = sys.block_on(guilds_future).unwrap();
     debug!("Guilds future returned: {:?}", res);
 
@@ -59,6 +58,8 @@ fn main() -> Result<(), Box<std::error::Error>> {
                         last_sequence: None,
                     }
                 });
+
+                System::current().registry().set(addr);
 
                 ()
             })

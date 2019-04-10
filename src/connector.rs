@@ -87,9 +87,14 @@ impl StreamHandler<Message, ProtocolError> for MyLittleConnection {
     }
 }
 
-#[derive(Default)]
 pub struct RequestConnector {
     pub key_header: String,
+}
+
+impl Default for RequestConnector {
+    fn default() -> Self {
+        unimplemented!("This should never happen. All actors are started manually")
+    }
 }
 
 impl Actor for RequestConnector {
@@ -138,8 +143,8 @@ impl actix::Message for RequestMessage {
 }
 
 /// Message to response to DISCORD gateway through websockets.
-struct ClientMessage {
-    data: MessagePacket,
+pub struct ClientMessage {
+    pub data: MessagePacket,
 }
 
 impl actix::Message for ClientMessage {
@@ -150,9 +155,20 @@ impl Handler<ClientMessage> for MyLittleConnection {
     type Result = Result<(), actix_web::error::Error>;
 
     fn handle(&mut self, mut msg: ClientMessage, ctx: &mut Context<Self>) -> Self::Result {
-        debug!("Got message\n{:?}", msg.data);
+        debug!("Sending client message to DISCORD\n{:?}", msg.data);
         std::mem::replace(&mut msg.data.s, self.last_sequence);
-        return Ok(());
+        let json = serde_json::to_string(&msg.data);
+        match json {
+            Ok(json) => {
+                self.writer.text(json);
+                // TODO acknowledge that message was received?
+                Ok(())
+            },
+            Err(e) => {
+                error!("Could not serialize json with error:\n{}", e);
+                Err(actix_web::error::Error::from(e))
+            }
+        }
     }
 }
 

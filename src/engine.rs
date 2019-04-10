@@ -7,6 +7,8 @@ use crate::discord::MessagePacket;
 use crate::discord::OpCode;
 use actix::*;
 use actix_web::ws::{Client, ClientWriter, Message, ProtocolError};
+use crate::connector::{ClientMessage, MyLittleConnection};
+use futures::Future;
 
 
 pub fn on_message(content: MessagePacket) {
@@ -19,10 +21,10 @@ pub fn on_message(content: MessagePacket) {
             let identity_packet = IdentityPacket {
                 token: p.key.clone(),
                 properties: IdentityPropertiesPacket {
-                    os: Some("windows".to_string()),
+                    os: "windows".to_owned(),
                     // TODO wtf am i doing?
-                    browser: Some("konno".to_string()),
-                    device: Some("konno".to_string()),
+                    browser: "konno".to_owned(),
+                    device: "konno".to_owned(),
                 },
                 compress: None,
                 large_threshold: None,
@@ -37,13 +39,16 @@ pub fn on_message(content: MessagePacket) {
                 s: None,
                 t: None
             };
-            debug!("Sending to discord: {:?}", hello_response);
-
-            // Ignoring future
-            //&self.sink.send(OwnedMessage::Text(serde_json::to_string(&hello_response).unwrap()));
+            debug!("Created identity message: {:?}", &hello_response);
+            let msg = ClientMessage {
+                data: hello_response,
+            };
+            let mlc = System::current().registry().get::<MyLittleConnection>();
+            // TODO send?
+            mlc.try_send(msg);
         },
         _ => {
-            unimplemented!("I dont know yet how to respond to {:?}", opcode)
+            warn!("I dont know yet how to respond to {:?}", opcode)
         }
     }
 }
@@ -57,8 +62,3 @@ pub fn heartbeat() {
     };
     // TODO
 }
-
-//    fn send(&self, message: &OwnedMessage) {
-//        self.sink.clone_any_send_sync(message);
-//    }
-

@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer, Deserializer};
 use std::collections::HashMap;
 
 use std::convert::From;
@@ -6,68 +6,68 @@ use std::convert::From;
 /// General response from DISCORD.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MessagePacket {
-    // OpCode as u8
+    /// OpCode as u8
     pub op: u8,
-    // Any internal data
+    /// Any internal data
     pub d: Option<serde_json::Value>,
-    // Session number
+    /// Session number
     pub s: Option<i64>,
-    // Event name
+    /// Event name
     pub t: Option<String>,
 }
 
 /// First response from Discord WebSocket.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct HelloPacket {
-    // Heartbeat interval in milliseconds
+    /// Heartbeat interval in milliseconds
     pub heartbeat_interval: u64,
-    // Some meta information from DISCORD.
+    /// Some meta information from DISCORD.
     pub _trace: Vec<String>,
-}
-
-/// Heartbeat packet to maintain connection to DISCORD.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct HeartbeatPacket {
-    // OpCode - shounld be 1
-    pub op: u8,
-    // last s received by me
-    pub d: Option<i64>,
 }
 
 /// Packet to identify myself to DISCORD.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IdentityPacket {
-    // My secret
+    /// My secret
     pub token: String,
-    // Some properties
+    /// Some properties
     pub properties: IdentityPropertiesPacket,
-    // Whether this connection supports compression of packets
+    /// Whether this connection supports compression of packets
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub compress: Option<bool>,
-    // Offline members of guild threshold
+    /// Offline members of guild threshold
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub large_threshold: Option<u64>,
-    // Something to deal with extra large bots
+    /// Something to deal with extra large bots
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub shard: Option<Vec<u64>>,
-    // My status
+    /// My status
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub presence: Option<UpdateStatusPacket>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct IdentityPropertiesPacket {
+    /// My operating system
     #[serde(alias = "$os")]
-    pub os: Option<String>,
-
+    pub os: String,
+    /// My library name
     #[serde(alias = "$browser")]
-    pub browser: Option<String>,
-
+    pub browser: String,
+    /// My library name
     #[serde(alias = "$device")]
-    pub device: Option<String>,
+    pub device: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct UpdateStatusPacket {
+    /// Unix time in milliseconds of when the client went idle, or null if the client is not idle
     pub since: Option<u64>,
+    /// null, or user's new activity
     pub game: Option<HashMap<String, String>>, // TODO struct
+    /// user's new status
     pub status: Status,
+    /// whether or not the client is afk
     pub afk: bool,
 }
 
