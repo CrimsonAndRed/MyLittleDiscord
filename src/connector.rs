@@ -15,6 +15,7 @@ pub struct WssConnector {
     pub last_sequence: Option<i64>,
 }
 
+/// Dont look here ~
 impl Default for WssConnector {
     fn default() -> Self {
         unimplemented!("This should never happen. All actors are started manually")
@@ -91,6 +92,7 @@ pub struct RequestConnector {
     pub key_header: String,
 }
 
+/// Dont look here ~
 impl Default for RequestConnector {
     fn default() -> Self {
         unimplemented!("This should never happen. All actors are started manually")
@@ -104,20 +106,50 @@ impl Actor for RequestConnector {
 impl actix::Supervised for RequestConnector {}
 impl SystemService for RequestConnector {}
 
-/// Async
 impl Handler<RequestMessage> for RequestConnector {
     type Result = Box<dyn Future<Item = serde_json::Value, Error = actix_web::error::Error>>;
 
     fn handle(&mut self, msg: RequestMessage, ctx: &mut Context<Self>) -> Self::Result {
-        debug!("Handled msg {:?}", msg);
-        let res = client::get(msg.url)
-            .header(
-                actix_web::http::header::AUTHORIZATION,
-                self.key_header.to_string(),
-            )
-            .finish()
-            .unwrap()
-            .send();
+        let url = &msg.url;
+        let mut req = match &msg.method {
+            HttpMethod::GET => {
+                client::get(url)
+            },
+            HttpMethod::POST => {
+                client::post(url)
+            },
+            HttpMethod::PUT => {
+                client::put(url)
+            },
+            HttpMethod::DELETE => {
+                client::delete(url)
+            }
+        };
+        let req = req
+                .header(
+                    actix_web::http::header::AUTHORIZATION,
+                    self.key_header.to_string(),
+                );
+
+        let req = if msg.data.is_some() {
+            req.json(&msg.data)
+        } else {
+            req.finish()
+        };
+
+        let res = req
+                .unwrap()
+                .send();
+
+        debug!("Handled msg {:?}", &msg);
+//        let res = client::get(msg.url)
+//            .header(
+//                actix_web::http::header::AUTHORIZATION,
+//                self.key_header.to_string(),
+//            )
+//            .finish()
+//            .unwrap()
+//            .send();
         let res = res.map_err(actix_web::error::Error::from).and_then(|resp| {
             resp.json()
                 .from_err()
@@ -134,7 +166,7 @@ impl Handler<RequestMessage> for RequestConnector {
 pub struct RequestMessage {
     pub method: HttpMethod,
     pub url: String,
-    pub data: Option<String>, //??? TODO
+    pub data: Option<serde_json::Value>,
 }
 
 impl actix::Message for RequestMessage {
@@ -173,7 +205,7 @@ impl Handler<ClientMessage> for WssConnector {
 }
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum HttpMethod {
     GET,
     POST,

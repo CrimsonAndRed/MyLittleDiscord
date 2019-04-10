@@ -1,11 +1,9 @@
-use log::{debug, error, info, warn};
+use log::{debug, error, warn};
 
 use crate::data::POOL;
 use crate::discord::*;
 use actix::*;
-use actix_web::ws::{Client, ClientWriter, Message, ProtocolError};
 use crate::connector::{ClientMessage, WssConnector};
-use futures::Future;
 
 
 pub fn on_message(content: MessagePacket) {

@@ -25,8 +25,6 @@ impl Pool {
     fn get_wss_ref() -> String {
         // It is an option to ask DISCORD for wss address
         // But it creates cyclic dependencies between POOL, RequestConnector and ActorsPool
-        // TODO try to simplify it
-        //        let log_text: String = format!("Tried to connect to address: {}", WSS_ADDRESS_LINK);
         "wss://gateway.discord.gg/?v=6&encoding=json".to_string()
     }
 
