@@ -9,7 +9,7 @@ pub struct MessagePacket {
     // OpCode as u8
     pub op: u8,
     // Any internal data
-    pub d: serde_json::Value,
+    pub d: Option<serde_json::Value>,
     // Session number
     pub s: Option<i64>,
     // Event name

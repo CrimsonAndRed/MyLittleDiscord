@@ -8,11 +8,10 @@ extern crate futures;
 
 use actix::*;
 use actix_web::ws::Client;
-use connector::{HttpMethod, MyLittleConnection, RequestMessage};
 use futures::Future;
 use log::{debug, error};
+use connector::*;
 
-mod actors;
 mod connector;
 mod data;
 mod discord;
@@ -25,16 +24,20 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
     debug!("Trying to create pools");
     let p: &data::Pool = &data::POOL;
-    let ap: &actors::ActorsPool = &actors::ACTORS;
+
+    let addr = register_actor(RequestConnector {
+        key_header: format!("Bot {}", &p.key),
+    });
+
     debug!("Done with pools");
 
     // Just for test
-    let guilds_future = ap.request_connector.send(RequestMessage {
+    let guilds_future = System::current().registry().get::<RequestConnector>().send(RequestMessage {
         method: HttpMethod::GET,
         url: "https://discordapp.com/api/v6/users/@me/guilds".to_owned(),
         data: None,
     });
-    debug!("Got future for request");
+    debug!("{:?}", System::current().registry());
     let res = sys.block_on(guilds_future).unwrap();
     debug!("Guilds future returned: {:?}", res);
 
@@ -63,4 +66,10 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
     let _ = sys.run();
     Ok(())
+}
+
+fn register_actor<A: SystemService>(actor: A) -> Addr<A> {
+    let addr = actor.start();
+    System::current().registry().set(addr.clone());
+    addr
 }

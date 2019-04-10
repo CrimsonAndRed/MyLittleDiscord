@@ -1,16 +1,24 @@
-use log::{debug, info, warn};
+use log::{debug, info, warn, error};
 
 use actix::*;
 use actix_web::client;
 use actix_web::ws::{ClientWriter, Message, ProtocolError};
 use actix_web::HttpMessage;
 use futures::Future;
+use crate::discord::MessagePacket;
+use crate::engine::*;
 
 /// Internal engine that handles DISCORD messages.
 pub struct MyLittleConnection {
     pub writer: ClientWriter,
 
     pub last_sequence: Option<i64>,
+}
+
+impl Default for MyLittleConnection {
+    fn default() -> Self {
+        unimplemented!("This should never happen. All actors are started manually")
+    }
 }
 
 impl Actor for MyLittleConnection {
@@ -25,10 +33,30 @@ impl Actor for MyLittleConnection {
     }
 }
 
+// Wow i spent so much time figuring out how to put addresses to special pool
+// But it seems like already implemented feature in actix
+// I have to play with Default though, maybe there is a way to avoid implementing Default when a construct all my actors manually?
+// I also like that official user guide ignores registies.
+impl actix::Supervised for MyLittleConnection {}
+impl SystemService for MyLittleConnection {}
+
+
 impl StreamHandler<Message, ProtocolError> for MyLittleConnection {
     fn handle(&mut self, msg: Message, ctx: &mut Context<Self>) {
         match msg {
-            Message::Text(txt) => info!("Got msg\n{:?}", txt),
+            Message::Text(txt) => {
+                info!("Got msg {:?}", txt);
+                let json: serde_json::Result<MessagePacket> = serde_json::from_str(&txt);
+                match json {
+                    Err(e) => {
+                        error!("Failed to parse header json {}. Ignoring packet.", e);
+                    }
+                    Ok(content) => {
+                        self.last_sequence = content.s;
+                        on_message(content);
+                    }
+                }
+            },
             Message::Close(e) => {
                 warn!("Received close message from DISCORD, with reason {:?}", &e);
                 warn!("Closing connection and exitting");
@@ -59,6 +87,7 @@ impl StreamHandler<Message, ProtocolError> for MyLittleConnection {
     }
 }
 
+#[derive(Default)]
 pub struct RequestConnector {
     pub key_header: String,
 }
@@ -66,6 +95,9 @@ pub struct RequestConnector {
 impl Actor for RequestConnector {
     type Context = Context<Self>;
 }
+
+impl actix::Supervised for RequestConnector {}
+impl SystemService for RequestConnector {}
 
 /// Async
 impl Handler<RequestMessage> for RequestConnector {
@@ -92,6 +124,7 @@ impl Handler<RequestMessage> for RequestConnector {
     }
 }
 
+/// Message to get some information from DISCORD REST API.
 #[derive(Debug)]
 pub struct RequestMessage {
     pub method: HttpMethod,
@@ -103,6 +136,26 @@ impl actix::Message for RequestMessage {
     // WHY??
     type Result = std::result::Result<serde_json::Value, actix_web::Error>;
 }
+
+/// Message to response to DISCORD gateway through websockets.
+struct ClientMessage {
+    data: MessagePacket,
+}
+
+impl actix::Message for ClientMessage {
+    type Result = Result<(), actix_web::error::Error>;
+}
+
+impl Handler<ClientMessage> for MyLittleConnection {
+    type Result = Result<(), actix_web::error::Error>;
+
+    fn handle(&mut self, mut msg: ClientMessage, ctx: &mut Context<Self>) -> Self::Result {
+        debug!("Got message\n{:?}", msg.data);
+        std::mem::replace(&mut msg.data.s, self.last_sequence);
+        return Ok(());
+    }
+}
+
 
 #[derive(Debug)]
 pub enum HttpMethod {
