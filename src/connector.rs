@@ -10,9 +10,12 @@ use futures::Future;
 
 /// Internal engine that handles DISCORD messages.
 pub struct WssConnector {
+    /// Pushes my messages to websocket's destination
     pub writer: ClientWriter,
-
+    /// Last sequence number from DISCORD
     pub last_sequence: Option<i64>,
+    /// Engine
+    pub engine: Engine,
 }
 
 /// Dont look here ~
@@ -49,11 +52,11 @@ impl StreamHandler<Message, ProtocolError> for WssConnector {
                 let json: serde_json::Result<MessagePacket> = serde_json::from_str(&txt);
                 match json {
                     Err(e) => {
-                        error!("Failed to parse header json {}. Ignoring packet.", e);
+                        error!("Failed to parse packet as json {}. Ignoring packet.", e);
                     }
                     Ok(content) => {
                         self.last_sequence = content.s;
-                        on_message(content);
+                        self.engine.on_message(content);
                     }
                 }
             }

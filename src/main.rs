@@ -9,6 +9,7 @@ extern crate futures;
 use actix::*;
 use actix_web::ws::Client;
 use connector::*;
+use engine::Engine;
 use futures::Future;
 use log::{debug, error};
 
@@ -60,6 +61,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
                     WssConnector {
                         writer,
                         last_sequence: None,
+                        engine: Engine::new(),
                     }
                 });
 

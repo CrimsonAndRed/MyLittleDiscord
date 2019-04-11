@@ -1,13 +1,13 @@
+use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
-
 use std::convert::From;
 
 /// General response from DISCORD.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MessagePacket {
     /// OpCode as u8
-    pub op: u8,
+    pub op: OpCode,
     /// Any internal data
     pub d: Option<serde_json::Value>,
     /// Session number
@@ -80,7 +80,7 @@ pub enum Status {
     Offline,
 }
 
-/// Opcodes of DISOCRD protocol.
+/// Opcodes of DISCORD protocol.
 #[derive(Debug)]
 pub enum OpCode {
     Dispatch,
@@ -115,7 +115,25 @@ impl Into<u8> for OpCode {
     }
 }
 
-// Has to bee TryFrom, but it is unstable???
+impl Into<u8> for &OpCode {
+    fn into(self) -> u8 {
+        match self {
+            OpCode::Dispatch => 0,
+            OpCode::Heartbeat => 1,
+            OpCode::Identify => 2,
+            OpCode::StatusUpdate => 3,
+            OpCode::VoiceStateUpdate => 4,
+            OpCode::Resume => 6,
+            OpCode::Reconnect => 7,
+            OpCode::RequestGuildMembers => 8,
+            OpCode::InvalidSession => 9,
+            OpCode::Hello => 10,
+            OpCode::HeartbeatACK => 11,
+        }
+    }
+}
+
+// Has to be TryFrom, but it is unstable???
 impl From<u8> for OpCode {
     fn from(value: u8) -> Self {
         match value {
@@ -132,5 +150,42 @@ impl From<u8> for OpCode {
             11 => OpCode::HeartbeatACK,
             _ => panic!("Unknown number for OpCode {}", value),
         }
+    }
+}
+
+impl Serialize for OpCode {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let num: u8 = self.into();
+        serializer.serialize_u8(num)
+    }
+}
+
+// serde_json only works with u64, i64 and f64
+// so lets try to deserialize u64 and convert to u8
+impl<'de> Deserialize<'de> for OpCode {
+    fn deserialize<D>(deserializer: D) -> Result<OpCode, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct MyLittleVisitor;
+
+        impl<'de> Visitor<'de> for MyLittleVisitor {
+            type Value = OpCode;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("A number from 0 up to 11")
+            }
+
+            fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(OpCode::from(s as u8))
+            }
+        }
+        deserializer.deserialize_u64(MyLittleVisitor)
     }
 }
