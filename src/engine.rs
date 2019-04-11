@@ -1,4 +1,4 @@
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 
 use crate::connector::{ClientMessage, WssConnector};
 use crate::data::POOL;
@@ -8,8 +8,12 @@ use std::thread::JoinHandle;
 
 #[derive(Debug)]
 pub struct Engine {
+    /// Keep session id to be able to resume connection.
     session_id: Option<String>,
+    /// Keep join point of heartbeat thread
     heartbeat_thread: Option<JoinHandle<()>>,
+    /// Myself identifier
+    myself_id: Option<u64>,
 }
 
 impl Engine {
@@ -17,14 +21,18 @@ impl Engine {
         Engine {
             session_id: None,
             heartbeat_thread: None,
+            myself_id: None,
         }
     }
     // Lets assume that:
-    // The internet is a scary place. Disconnections happen, especially with persistent connections. - we ignore this statement.
+    // DISCORD: <The internet is a scary place. Disconnections happen, especially with persistent connections.> - we ignore this statement, our internet is peaceful-friendly and stable.
     pub fn on_message(&mut self, content: MessagePacket) {
         match &content.op {
             OpCode::Hello => {
                 self.hello(content);
+            }
+            OpCode::Dispatch => {
+                self.dispatch(content);
             }
             OpCode::HeartbeatACK => {
                 debug!("Heartbeat succeeded (recieved ACK)");
@@ -102,7 +110,7 @@ impl Engine {
     /// Send heartbeat packet, acknowledging DISCORD that we are still alive.
     fn heartbeat(&self) {
         let packet = MessagePacket {
-            op: OpCode::Heartbeat.into(),
+            op: OpCode::Heartbeat,
             d: None,
             s: None,
             t: None,
@@ -117,6 +125,19 @@ impl Engine {
         match wss_con.try_send(msg) {
             Ok(_) => debug!("Succeeded delivering heartbeat message"),
             Err(e) => error!("Failed to deliver heartbeat message: {}", e),
+        }
+    }
+
+    /// Literally all regular events happened on server side.
+    fn dispatch(&mut self, content: MessagePacket) {
+        match &content.t {
+            None => debug!("There was no \"t\" parameter in Dispatch event. Ignoring packet"),
+            Some(t) => match t {
+                Event::MessageCreate => {
+                    debug!("Something was written in chat!");
+                }
+                _ => info!("We do not care about {:?} event. Ignoring packet", t),
+            },
         }
     }
 }

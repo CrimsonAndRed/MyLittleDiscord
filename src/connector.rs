@@ -170,7 +170,7 @@ impl Handler<ClientMessage> for WssConnector {
     type Result = Result<(), actix_web::error::Error>;
 
     fn handle(&mut self, mut msg: ClientMessage, ctx: &mut Context<Self>) -> Self::Result {
-        debug!("Sending client message to DISCORD\n{:?}", msg.data);
+        debug!("Sending client message to DISCORD: {:?}", msg.data);
         std::mem::replace(&mut msg.data.s, self.last_sequence);
         let json = serde_json::to_string(&msg.data);
         match json {
