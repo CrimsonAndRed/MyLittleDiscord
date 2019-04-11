@@ -8,9 +8,9 @@ extern crate futures;
 
 use actix::*;
 use actix_web::ws::Client;
+use connector::*;
 use futures::Future;
 use log::{debug, error};
-use connector::*;
 
 mod connector;
 mod data;
@@ -32,11 +32,15 @@ fn main() -> Result<(), Box<std::error::Error>> {
     debug!("Done with pools");
 
     // Just for test
-    let guilds_future = System::current().registry().get::<RequestConnector>().send(RequestMessage {
-        method: HttpMethod::GET,
-        url: "https://discordapp.com/api/v6/users/@me/guilds".to_owned(),
-        data: None,
-    });
+    let guilds_future =
+        System::current()
+            .registry()
+            .get::<RequestConnector>()
+            .send(RequestMessage {
+                method: HttpMethod::GET,
+                url: "https://discordapp.com/api/v6/users/@me/guilds".to_owned(),
+                data: None,
+            });
     let res = sys.block_on(guilds_future).unwrap();
     debug!("Guilds future returned: {:?}", res);
 

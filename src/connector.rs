@@ -1,12 +1,12 @@
-use log::{debug, info, warn, error};
+use log::{debug, error, info, warn};
 
+use crate::discord::MessagePacket;
+use crate::engine::*;
 use actix::*;
 use actix_web::client;
 use actix_web::ws::{ClientWriter, Message, ProtocolError};
 use actix_web::HttpMessage;
 use futures::Future;
-use crate::discord::MessagePacket;
-use crate::engine::*;
 
 /// Internal engine that handles DISCORD messages.
 pub struct WssConnector {
@@ -41,7 +41,6 @@ impl Actor for WssConnector {
 impl actix::Supervised for WssConnector {}
 impl SystemService for WssConnector {}
 
-
 impl StreamHandler<Message, ProtocolError> for WssConnector {
     fn handle(&mut self, msg: Message, ctx: &mut Context<Self>) {
         match msg {
@@ -57,7 +56,7 @@ impl StreamHandler<Message, ProtocolError> for WssConnector {
                         on_message(content);
                     }
                 }
-            },
+            }
             Message::Close(e) => {
                 warn!("Received close message from DISCORD, with reason {:?}", &e);
                 warn!("Closing connection and exitting");
@@ -112,24 +111,15 @@ impl Handler<RequestMessage> for RequestConnector {
     fn handle(&mut self, msg: RequestMessage, ctx: &mut Context<Self>) -> Self::Result {
         let url = &msg.url;
         let mut req = match &msg.method {
-            HttpMethod::GET => {
-                client::get(url)
-            },
-            HttpMethod::POST => {
-                client::post(url)
-            },
-            HttpMethod::PUT => {
-                client::put(url)
-            },
-            HttpMethod::DELETE => {
-                client::delete(url)
-            }
+            HttpMethod::GET => client::get(url),
+            HttpMethod::POST => client::post(url),
+            HttpMethod::PUT => client::put(url),
+            HttpMethod::DELETE => client::delete(url),
         };
-        let req = req
-                .header(
-                    actix_web::http::header::AUTHORIZATION,
-                    self.key_header.to_string(),
-                );
+        let req = req.header(
+            actix_web::http::header::AUTHORIZATION,
+            self.key_header.to_string(),
+        );
 
         let req = if msg.data.is_some() {
             req.json(&msg.data)
@@ -137,19 +127,9 @@ impl Handler<RequestMessage> for RequestConnector {
             req.finish()
         };
 
-        let res = req
-                .unwrap()
-                .send();
+        let res = req.unwrap().send();
 
         debug!("Handled msg {:?}", &msg);
-//        let res = client::get(msg.url)
-//            .header(
-//                actix_web::http::header::AUTHORIZATION,
-//                self.key_header.to_string(),
-//            )
-//            .finish()
-//            .unwrap()
-//            .send();
         let res = res.map_err(actix_web::error::Error::from).and_then(|resp| {
             resp.json()
                 .from_err()
@@ -195,7 +175,7 @@ impl Handler<ClientMessage> for WssConnector {
                 self.writer.text(json);
                 // TODO acknowledge that message was received?
                 Ok(())
-            },
+            }
             Err(e) => {
                 error!("Could not serialize json with error:\n{}", e);
                 Err(actix_web::error::Error::from(e))
@@ -203,7 +183,6 @@ impl Handler<ClientMessage> for WssConnector {
         }
     }
 }
-
 
 #[derive(Debug, PartialEq)]
 pub enum HttpMethod {

@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize, Serializer, Deserializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 
 use std::convert::From;

@@ -1,23 +1,20 @@
 use log::{debug, error, warn};
 
+use crate::connector::{ClientMessage, WssConnector};
 use crate::data::POOL;
 use crate::discord::*;
 use actix::*;
-use crate::connector::{ClientMessage, WssConnector};
-
 
 pub fn on_message(content: MessagePacket) {
     let opcode = OpCode::from(content.op);
     match opcode {
         OpCode::Hello => {
             hello(content);
-        },
+        }
         OpCode::HeartbeatACK => {
             debug!("Heartbeat succeeded (recieved ACK)");
-        },
-        _ => {
-            warn!("I dont know yet how to respond to {:?}", opcode)
         }
+        _ => warn!("I dont know yet how to respond to {:?}", opcode),
     }
 }
 
@@ -43,7 +40,7 @@ fn hello(content: MessagePacket) {
         // TODO no unwrap
         d: Some(res.unwrap()),
         s: None,
-        t: None
+        t: None,
     };
     debug!("Created identity message: {:?}", &hello_response);
     let msg = ClientMessage {
@@ -52,12 +49,8 @@ fn hello(content: MessagePacket) {
     let wss_con = System::current().registry().get::<WssConnector>();
     // TODO send?
     match wss_con.try_send(msg) {
-        Ok(_) => {
-            debug!("Succeeded delivering message")
-        },
-        Err(e) => {
-            error!("Failed to deliver message: {}", e)
-        }
+        Ok(_) => debug!("Succeeded delivering message"),
+        Err(e) => error!("Failed to deliver message: {}", e),
     };
     // Register scheduler for heartbeat
     let p: HelloPacket = serde_json::from_value(content.d.unwrap()).unwrap();
@@ -76,20 +69,14 @@ fn hello(content: MessagePacket) {
                 op: OpCode::Heartbeat.into(),
                 d: None,
                 s: None,
-                t: None
+                t: None,
             };
 
-            let msg = ClientMessage {
-                data: packet
-            };
+            let msg = ClientMessage { data: packet };
 
             match wss_con.try_send(msg) {
-                Ok(_) => {
-                    debug!("Succeeded delivering heartbeat message")
-                },
-                Err(e) => {
-                    error!("Failed to deliver heartbeat message: {}", e)
-                }
+                Ok(_) => debug!("Succeeded delivering heartbeat message"),
+                Err(e) => error!("Failed to deliver heartbeat message: {}", e),
             }
         }
     });
@@ -101,23 +88,17 @@ fn heartbeat() {
         op: OpCode::Heartbeat.into(),
         d: None,
         s: None,
-        t: None
+        t: None,
     };
 
-    let msg = ClientMessage {
-        data: packet
-    };
+    let msg = ClientMessage { data: packet };
 
     debug!("Configured heartbeat packet");
 
     let wss_con = System::current().registry().get::<WssConnector>();
     // TODO send?
     match wss_con.try_send(msg) {
-        Ok(_) => {
-            debug!("Succeeded delivering heartbeat message")
-        },
-        Err(e) => {
-            error!("Failed to deliver heartbeat message: {}", e)
-        }
+        Ok(_) => debug!("Succeeded delivering heartbeat message"),
+        Err(e) => error!("Failed to deliver heartbeat message: {}", e),
     }
 }
