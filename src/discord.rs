@@ -1,7 +1,7 @@
 use serde::de::Visitor;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
-use std::convert::From;
+use std::convert::{Into, TryFrom};
 
 // TODO write macro that implements Serialize and Deserialize for simple enums
 
@@ -183,23 +183,25 @@ impl Into<String> for &Status {
 }
 
 // Has to be TryFrom, but it is unstable???
-impl From<&str> for Status {
-    fn from(value: &str) -> Self {
+impl TryFrom<&str> for Status {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "online" => Status::Online,
-            "dnd" => Status::Dnd,
-            "idle" => Status::Idle,
-            "invisible" => Status::Invisible,
-            "offline" => Status::Offline,
-            _ => panic!("Unknown number for MessageActivityType {}", value),
+            "online" => Ok(Status::Online),
+            "dnd" => Ok(Status::Dnd),
+            "idle" => Ok(Status::Idle),
+            "invisible" => Ok(Status::Invisible),
+            "offline" => Ok(Status::Offline),
+            _ => Err(format!("Unknown number for MessageActivityType {}", value)),
         }
     }
 }
 
 impl Serialize for Status {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-        where
-            S: Serializer,
+    where
+        S: Serializer,
     {
         let x: String = self.into();
         serializer.serialize_str(&x)
@@ -208,8 +210,8 @@ impl Serialize for Status {
 
 impl<'de> Deserialize<'de> for Status {
     fn deserialize<D>(deserializer: D) -> Result<Status, D::Error>
-        where
-            D: Deserializer<'de>,
+    where
+        D: Deserializer<'de>,
     {
         struct MyLittleVisitor;
 
@@ -221,16 +223,15 @@ impl<'de> Deserialize<'de> for Status {
             }
 
             fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-                where
-                    E: serde::de::Error,
+            where
+                E: serde::de::Error,
             {
-                Ok(Status::from(s))
+                Status::try_from(s).map_err(serde::de::Error::custom)
             }
         }
         deserializer.deserialize_str(MyLittleVisitor)
     }
 }
-
 
 /// Opcodes of DISCORD protocol.
 #[derive(Debug)]
@@ -286,21 +287,23 @@ impl Into<u8> for &OpCode {
 }
 
 // Has to be TryFrom, but it is unstable???
-impl From<u8> for OpCode {
-    fn from(value: u8) -> Self {
+impl TryFrom<u8> for OpCode {
+    type Error = String;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0 => OpCode::Dispatch,
-            1 => OpCode::Heartbeat,
-            2 => OpCode::Identify,
-            3 => OpCode::StatusUpdate,
-            4 => OpCode::VoiceStateUpdate,
-            6 => OpCode::Resume,
-            7 => OpCode::Reconnect,
-            8 => OpCode::RequestGuildMembers,
-            9 => OpCode::InvalidSession,
-            10 => OpCode::Hello,
-            11 => OpCode::HeartbeatACK,
-            _ => panic!("Unknown number for OpCode {}", value),
+            0 => Ok(OpCode::Dispatch),
+            1 => Ok(OpCode::Heartbeat),
+            2 => Ok(OpCode::Identify),
+            3 => Ok(OpCode::StatusUpdate),
+            4 => Ok(OpCode::VoiceStateUpdate),
+            6 => Ok(OpCode::Resume),
+            7 => Ok(OpCode::Reconnect),
+            8 => Ok(OpCode::RequestGuildMembers),
+            9 => Ok(OpCode::InvalidSession),
+            10 => Ok(OpCode::Hello),
+            11 => Ok(OpCode::HeartbeatACK),
+            _ => Err(format!("Unknown number for OpCode {}", value)),
         }
     }
 }
@@ -334,7 +337,7 @@ impl<'de> Deserialize<'de> for OpCode {
             where
                 E: serde::de::Error,
             {
-                Ok(OpCode::from(s as u8))
+                OpCode::try_from(s as u8).map_err(serde::de::Error::custom)
             }
         }
         deserializer.deserialize_u64(MyLittleVisitor)
@@ -426,46 +429,47 @@ impl Into<String> for &Event {
     }
 }
 
-// Has to be TryFrom, but it is unstable???
-impl From<&str> for Event {
-    fn from(value: &str) -> Self {
+impl TryFrom<&str> for Event {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
-            "HELLO" => Event::Hello,
-            "READY" => Event::Ready,
-            "RESUMED" => Event::Resumed,
-            "INVALID_SESSION" => Event::InvalidSession,
-            "CHANNEL_CREATE" => Event::ChannelCreate,
-            "CHANNEL_UPDATE" => Event::ChannelUpdate,
-            "CHANNEL_DELETE" => Event::ChannelDelete,
-            "CHANNEL_PINS_UPDATE" => Event::ChannelPinsUpdate,
-            "GUILD_CREATE" => Event::GuildCreate,
-            "GUILD_UPDATE" => Event::GuildUpdate,
-            "GUILD_DELETE" => Event::GuildDelete,
-            "GUILD_BAN_ADD" => Event::GuildBanAdd,
-            "GUILD_BAN_REMOVE" => Event::GuildBanRemove,
-            "GUILD_EMOJIS_UPDATE" => Event::GuildEmojisUpdate,
-            "GUILD_INTEGRATIONS_UPDATE" => Event::GuildIntegrationsUpdate,
-            "GUILD_MEMBER_ADD" => Event::GuildMemberAdd,
-            "GUILD_MEMBER_REMOVE" => Event::GuildMemberRemove,
-            "GUILD_MEMBER_UPDATE" => Event::GuildMemberUpdate,
-            "GUILD_MEMBERS_CHUNK" => Event::GuildMembersChunk,
-            "GUILD_ROLE_CREATE" => Event::GuildRoleCreate,
-            "GUILD_ROLE_UPDATE" => Event::GuildRoleUpdate,
-            "GUILD_ROLE_DELETE" => Event::GuildRoleDelete,
-            "MESSAGE_CREATE" => Event::MessageCreate,
-            "MESSAGE_UPDATE" => Event::MessageUpdate,
-            "MESSAGE_DELETE" => Event::MessageDelete,
-            "MESSAGE_DELETE_BULK" => Event::MessageDeleteBulk,
-            "MESSAGE_REACTION_ADD" => Event::MessageReactionAdd,
-            "MESSAGE_REACTION_REMOVE" => Event::MessageReactionRemove,
-            "MESSAGE_REACTION_REMOVE_ALL" => Event::MessageReactionRemoveAll,
-            "PRESENCE_UPDATE" => Event::PresenceUpdate,
-            "TYPING_START" => Event::TypingStart,
-            "USER_UPDATE" => Event::UserUpdate,
-            "VOICE_STATE_UPDATE" => Event::VoiceStateUpdate,
-            "VOICE_SERVER_UPDATE" => Event::VoiceServerUpdate,
-            "WEBHOOKS_UPDATE" => Event::WebhooksUpdate,
-            _ => panic!("Unknown event name {}", value),
+            "HELLO" => Ok(Event::Hello),
+            "READY" => Ok(Event::Ready),
+            "RESUMED" => Ok(Event::Resumed),
+            "INVALID_SESSION" => Ok(Event::InvalidSession),
+            "CHANNEL_CREATE" => Ok(Event::ChannelCreate),
+            "CHANNEL_UPDATE" => Ok(Event::ChannelUpdate),
+            "CHANNEL_DELETE" => Ok(Event::ChannelDelete),
+            "CHANNEL_PINS_UPDATE" => Ok(Event::ChannelPinsUpdate),
+            "GUILD_CREATE" => Ok(Event::GuildCreate),
+            "GUILD_UPDATE" => Ok(Event::GuildUpdate),
+            "GUILD_DELETE" => Ok(Event::GuildDelete),
+            "GUILD_BAN_ADD" => Ok(Event::GuildBanAdd),
+            "GUILD_BAN_REMOVE" => Ok(Event::GuildBanRemove),
+            "GUILD_EMOJIS_UPDATE" => Ok(Event::GuildEmojisUpdate),
+            "GUILD_INTEGRATIONS_UPDATE" => Ok(Event::GuildIntegrationsUpdate),
+            "GUILD_MEMBER_ADD" => Ok(Event::GuildMemberAdd),
+            "GUILD_MEMBER_REMOVE" => Ok(Event::GuildMemberRemove),
+            "GUILD_MEMBER_UPDATE" => Ok(Event::GuildMemberUpdate),
+            "GUILD_MEMBERS_CHUNK" => Ok(Event::GuildMembersChunk),
+            "GUILD_ROLE_CREATE" => Ok(Event::GuildRoleCreate),
+            "GUILD_ROLE_UPDATE" => Ok(Event::GuildRoleUpdate),
+            "GUILD_ROLE_DELETE" => Ok(Event::GuildRoleDelete),
+            "MESSAGE_CREATE" => Ok(Event::MessageCreate),
+            "MESSAGE_UPDATE" => Ok(Event::MessageUpdate),
+            "MESSAGE_DELETE" => Ok(Event::MessageDelete),
+            "MESSAGE_DELETE_BULK" => Ok(Event::MessageDeleteBulk),
+            "MESSAGE_REACTION_ADD" => Ok(Event::MessageReactionAdd),
+            "MESSAGE_REACTION_REMOVE" => Ok(Event::MessageReactionRemove),
+            "MESSAGE_REACTION_REMOVE_ALL" => Ok(Event::MessageReactionRemoveAll),
+            "PRESENCE_UPDATE" => Ok(Event::PresenceUpdate),
+            "TYPING_START" => Ok(Event::TypingStart),
+            "USER_UPDATE" => Ok(Event::UserUpdate),
+            "VOICE_STATE_UPDATE" => Ok(Event::VoiceStateUpdate),
+            "VOICE_SERVER_UPDATE" => Ok(Event::VoiceServerUpdate),
+            "WEBHOOKS_UPDATE" => Ok(Event::WebhooksUpdate),
+            _ => Err(format!("Unknown event name {}", value)),
         }
     }
 }
@@ -500,7 +504,7 @@ impl<'de> Deserialize<'de> for Event {
             where
                 E: serde::de::Error,
             {
-                Ok(Event::from(s))
+                Event::try_from(s).map_err(serde::de::Error::custom)
             }
         }
         deserializer.deserialize_str(MyLittleVisitor)
@@ -880,19 +884,20 @@ impl Into<u8> for &MessageType {
     }
 }
 
-// Has to be TryFrom, but it is unstable???
-impl From<u8> for MessageType {
-    fn from(value: u8) -> Self {
+impl TryFrom<u8> for MessageType {
+    type Error = String;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            0 => MessageType::Default,
-            1 => MessageType::RecipientAdd,
-            2 => MessageType::RecipientRemove,
-            3 => MessageType::Call,
-            4 => MessageType::ChannelNameChange,
-            5 => MessageType::ChannelIconMessage,
-            6 => MessageType::ChannelPinnedMessage,
-            7 => MessageType::GuildMemberJoin,
-            _ => panic!("Unknown number for MessageType {}", value),
+            0 => Ok(MessageType::Default),
+            1 => Ok(MessageType::RecipientAdd),
+            2 => Ok(MessageType::RecipientRemove),
+            3 => Ok(MessageType::Call),
+            4 => Ok(MessageType::ChannelNameChange),
+            5 => Ok(MessageType::ChannelIconMessage),
+            6 => Ok(MessageType::ChannelPinnedMessage),
+            7 => Ok(MessageType::GuildMemberJoin),
+            _ => Err(format!("Unknown number for MessageType {}", value)),
         }
     }
 }
@@ -926,7 +931,7 @@ impl<'de> Deserialize<'de> for MessageType {
             where
                 E: serde::de::Error,
             {
-                Ok(MessageType::from(s as u8))
+                MessageType::try_from(s as u8).map_err(serde::de::Error::custom)
             }
         }
         deserializer.deserialize_u64(MyLittleVisitor)
@@ -965,14 +970,16 @@ impl Into<u8> for &MessageActivityType {
 }
 
 // Has to be TryFrom, but it is unstable???
-impl From<u8> for MessageActivityType {
-    fn from(value: u8) -> Self {
+impl TryFrom<u8> for MessageActivityType {
+    type Error = String;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
         match value {
-            1 => MessageActivityType::Join,
-            2 => MessageActivityType::Spectate,
-            3 => MessageActivityType::Listen,
-            5 => MessageActivityType::JoinRequest,
-            _ => panic!("Unknown number for MessageActivityType {}", value),
+            1 => Ok(MessageActivityType::Join),
+            2 => Ok(MessageActivityType::Spectate),
+            3 => Ok(MessageActivityType::Listen),
+            5 => Ok(MessageActivityType::JoinRequest),
+            _ => Err(format!("Unknown number for MessageActivityType {}", value)),
         }
     }
 }
@@ -1006,9 +1013,10 @@ impl<'de> Deserialize<'de> for MessageActivityType {
             where
                 E: serde::de::Error,
             {
-                Ok(MessageActivityType::from(s as u8))
+                MessageActivityType::try_from(s as u8).map_err(serde::de::Error::custom)
             }
         }
         deserializer.deserialize_u64(MyLittleVisitor)
     }
 }
+// TODO have to write structures for different messages
