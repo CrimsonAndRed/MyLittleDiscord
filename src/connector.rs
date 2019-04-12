@@ -1,6 +1,6 @@
 use log::{debug, error, info, warn};
 
-use crate::discord::MessagePacket;
+use crate::discord::WrapperPacket;
 use crate::engine::*;
 use actix::*;
 use actix_web::client;
@@ -49,7 +49,7 @@ impl StreamHandler<Message, ProtocolError> for WssConnector {
         match msg {
             Message::Text(txt) => {
                 info!("Got msg {:?}", txt);
-                let json: serde_json::Result<MessagePacket> = serde_json::from_str(&txt);
+                let json: serde_json::Result<WrapperPacket> = serde_json::from_str(&txt);
                 match json {
                     Err(e) => {
                         error!("Failed to parse packet as json {}. Ignoring packet.", e);
@@ -159,7 +159,7 @@ impl actix::Message for RequestMessage {
 
 /// Message to response to DISCORD gateway through websockets.
 pub struct ClientMessage {
-    pub data: MessagePacket,
+    pub data: WrapperPacket,
 }
 
 impl actix::Message for ClientMessage {

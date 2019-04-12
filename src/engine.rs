@@ -26,7 +26,7 @@ impl Engine {
     }
     // Lets assume that:
     // DISCORD: <The internet is a scary place. Disconnections happen, especially with persistent connections.> - we ignore this statement, our internet is peaceful-friendly and stable.
-    pub fn on_message(&mut self, content: MessagePacket) {
+    pub fn on_message(&mut self, content: WrapperPacket) {
         match &content.op {
             OpCode::Hello => {
                 self.hello(content);
@@ -42,7 +42,7 @@ impl Engine {
     }
 
     /// Received Hello -> Register heartbeat and send my secrets
-    fn hello(&mut self, content: MessagePacket) {
+    fn hello(&mut self, content: WrapperPacket) {
         let p = &POOL;
         let identity_packet = IdentityPacket {
             token: p.key.clone(),
@@ -58,7 +58,7 @@ impl Engine {
             presence: None,
         };
         let res = serde_json::to_value(&identity_packet);
-        let hello_response = MessagePacket {
+        let hello_response = WrapperPacket {
             op: OpCode::Identify.into(),
             // TODO no unwrap
             d: Some(res.unwrap()),
@@ -88,7 +88,7 @@ impl Engine {
                 debug!("It is time to send heartbeat packet");
                 // No sync on heartbeat
                 // TODO solve it
-                let packet = MessagePacket {
+                let packet = WrapperPacket {
                     op: OpCode::Heartbeat.into(),
                     d: None,
                     s: None,
@@ -109,7 +109,7 @@ impl Engine {
 
     /// Send heartbeat packet, acknowledging DISCORD that we are still alive.
     fn heartbeat(&self) {
-        let packet = MessagePacket {
+        let packet = WrapperPacket {
             op: OpCode::Heartbeat,
             d: None,
             s: None,
@@ -129,7 +129,7 @@ impl Engine {
     }
 
     /// Literally all regular events happened on server side.
-    fn dispatch(&mut self, content: MessagePacket) {
+    fn dispatch(&mut self, content: WrapperPacket) {
         match &content.t {
             None => debug!("There was no \"t\" parameter in Dispatch event. Ignoring packet"),
             Some(t) => match t {
