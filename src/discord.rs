@@ -3,7 +3,48 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::convert::{Into, TryFrom};
 
-// TODO write macro that implements Serialize and Deserialize for simple enums
+/// This macro implements Serialize and Deserialize for c-like enums (java-like for me), that implements Into and From u8.
+// TODO same for str
+macro_rules! simple_serde_enum_to_u8 {
+    ($impl_type:ty, $expected_text:expr) => {
+
+        impl Serialize for $impl_type {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                serializer.serialize_u8(self.into())
+            }
+        }
+
+        // serde_json only works with u64, i64 and f64
+        // so lets try to deserialize u64 and convert to u8
+        impl<'de> Deserialize<'de> for $impl_type {
+            fn deserialize<D>(deserializer: D) -> Result<$impl_type, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct MyLittleVisitor;
+
+                impl<'de> Visitor<'de> for MyLittleVisitor {
+                    type Value = $impl_type;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                        formatter.write_str($expected_text)
+                    }
+
+                    fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        <$impl_type>::try_from(s as u8).map_err(serde::de::Error::custom)
+                    }
+                }
+                deserializer.deserialize_u64(MyLittleVisitor)
+            }
+        }
+    }
+}
 
 /// General response from DISCORD.
 #[derive(Debug, Serialize, Deserialize)]
@@ -308,41 +349,43 @@ impl TryFrom<u8> for OpCode {
     }
 }
 
-impl Serialize for OpCode {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_u8(self.into())
-    }
-}
+simple_serde_enum_to_u8!(OpCode, "A number from 0 up to 11");
 
-// serde_json only works with u64, i64 and f64
-// so lets try to deserialize u64 and convert to u8
-impl<'de> Deserialize<'de> for OpCode {
-    fn deserialize<D>(deserializer: D) -> Result<OpCode, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct MyLittleVisitor;
-
-        impl<'de> Visitor<'de> for MyLittleVisitor {
-            type Value = OpCode;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("A number from 0 up to 11")
-            }
-
-            fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                OpCode::try_from(s as u8).map_err(serde::de::Error::custom)
-            }
-        }
-        deserializer.deserialize_u64(MyLittleVisitor)
-    }
-}
+//impl Serialize for OpCode {
+//    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//    where
+//        S: Serializer,
+//    {
+//        serializer.serialize_u8(self.into())
+//    }
+//}
+//
+//// serde_json only works with u64, i64 and f64
+//// so lets try to deserialize u64 and convert to u8
+//impl<'de> Deserialize<'de> for OpCode {
+//    fn deserialize<D>(deserializer: D) -> Result<OpCode, D::Error>
+//    where
+//        D: Deserializer<'de>,
+//    {
+//        struct MyLittleVisitor;
+//
+//        impl<'de> Visitor<'de> for MyLittleVisitor {
+//            type Value = OpCode;
+//
+//            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+//                formatter.write_str("A number from 0 up to 11")
+//            }
+//
+//            fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
+//            where
+//                E: serde::de::Error,
+//            {
+//                OpCode::try_from(s as u8).map_err(serde::de::Error::custom)
+//            }
+//        }
+//        deserializer.deserialize_u64(MyLittleVisitor)
+//    }
+//}
 
 impl Into<String> for Event {
     fn into(self) -> String {
@@ -484,8 +527,6 @@ impl Serialize for Event {
     }
 }
 
-// serde_json only works with u64, i64 and f64
-// so lets try to deserialize u64 and convert to u8
 impl<'de> Deserialize<'de> for Event {
     fn deserialize<D>(deserializer: D) -> Result<Event, D::Error>
     where
@@ -902,41 +943,43 @@ impl TryFrom<u8> for MessageType {
     }
 }
 
-impl Serialize for MessageType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_u8(self.into())
-    }
-}
+simple_serde_enum_to_u8!(MessageType, "A number from 0 up to 7");
 
-// serde_json only works with u64, i64 and f64
-// so lets try to deserialize u64 and convert to u8
-impl<'de> Deserialize<'de> for MessageType {
-    fn deserialize<D>(deserializer: D) -> Result<MessageType, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct MyLittleVisitor;
-
-        impl<'de> Visitor<'de> for MyLittleVisitor {
-            type Value = MessageType;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("A number from 0 up to 7")
-            }
-
-            fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                MessageType::try_from(s as u8).map_err(serde::de::Error::custom)
-            }
-        }
-        deserializer.deserialize_u64(MyLittleVisitor)
-    }
-}
+//impl Serialize for MessageType {
+//    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//    where
+//        S: Serializer,
+//    {
+//        serializer.serialize_u8(self.into())
+//    }
+//}
+//
+//// serde_json only works with u64, i64 and f64
+//// so lets try to deserialize u64 and convert to u8
+//impl<'de> Deserialize<'de> for MessageType {
+//    fn deserialize<D>(deserializer: D) -> Result<MessageType, D::Error>
+//    where
+//        D: Deserializer<'de>,
+//    {
+//        struct MyLittleVisitor;
+//
+//        impl<'de> Visitor<'de> for MyLittleVisitor {
+//            type Value = MessageType;
+//
+//            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+//                formatter.write_str("A number from 0 up to 7")
+//            }
+//
+//            fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
+//            where
+//                E: serde::de::Error,
+//            {
+//                MessageType::try_from(s as u8).map_err(serde::de::Error::custom)
+//            }
+//        }
+//        deserializer.deserialize_u64(MyLittleVisitor)
+//    }
+//}
 
 #[derive(Debug)]
 pub enum MessageActivityType {
@@ -984,39 +1027,40 @@ impl TryFrom<u8> for MessageActivityType {
     }
 }
 
-impl Serialize for MessageActivityType {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        serializer.serialize_u8(self.into())
-    }
-}
-
-// serde_json only works with u64, i64 and f64
-// so lets try to deserialize u64 and convert to u8
-impl<'de> Deserialize<'de> for MessageActivityType {
-    fn deserialize<D>(deserializer: D) -> Result<MessageActivityType, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct MyLittleVisitor;
-
-        impl<'de> Visitor<'de> for MyLittleVisitor {
-            type Value = MessageActivityType;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("A number 1, 2, 3 or 5")
-            }
-
-            fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                MessageActivityType::try_from(s as u8).map_err(serde::de::Error::custom)
-            }
-        }
-        deserializer.deserialize_u64(MyLittleVisitor)
-    }
-}
+simple_serde_enum_to_u8!(MessageActivityType, "A number 1, 2, 3 or 5");
+//impl Serialize for MessageActivityType {
+//    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+//    where
+//        S: Serializer,
+//    {
+//        serializer.serialize_u8(self.into())
+//    }
+//}
+//
+//// serde_json only works with u64, i64 and f64
+//// so lets try to deserialize u64 and convert to u8
+//impl<'de> Deserialize<'de> for MessageActivityType {
+//    fn deserialize<D>(deserializer: D) -> Result<MessageActivityType, D::Error>
+//    where
+//        D: Deserializer<'de>,
+//    {
+//        struct MyLittleVisitor;
+//
+//        impl<'de> Visitor<'de> for MyLittleVisitor {
+//            type Value = MessageActivityType;
+//
+//            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+//                formatter.write_str("A number 1, 2, 3 or 5")
+//            }
+//
+//            fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
+//            where
+//                E: serde::de::Error,
+//            {
+//                MessageActivityType::try_from(s as u8).map_err(serde::de::Error::custom)
+//            }
+//        }
+//        deserializer.deserialize_u64(MyLittleVisitor)
+//    }
+//}
 // TODO have to write structures for different messages

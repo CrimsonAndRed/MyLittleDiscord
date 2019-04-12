@@ -21,7 +21,7 @@ pub struct WssConnector {
 /// Dont look here ~
 impl Default for WssConnector {
     fn default() -> Self {
-        unimplemented!("This should never happen. All actors are started manually")
+        unreachable!("Default for System actor was called. This should never happen. All actors are started manually")
     }
 }
 
@@ -97,7 +97,7 @@ pub struct RequestConnector {
 /// Dont look here ~
 impl Default for RequestConnector {
     fn default() -> Self {
-        unimplemented!("This should never happen. All actors are started manually")
+        unreachable!("Default for System actor was called. This should never happen. All actors are started manually")
     }
 }
 
