@@ -23,14 +23,13 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
     log4rs::init_file("conf/log4rs.yaml", Default::default())?;
 
-    debug!("Trying to create pools");
+    debug!("Trying to create pool");
     let p: &data::Pool = &data::POOL;
+    debug!("Done with pool");
 
     let addr = register_actor(RequestConnector {
         key_header: format!("Bot {}", &p.key),
     });
-
-    debug!("Done with pools");
 
     // Just for test
     let guilds_future =

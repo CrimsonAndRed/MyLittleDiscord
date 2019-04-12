@@ -3,6 +3,8 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::convert::From;
 
+// TODO write macro that implements Serialize and Deserialize for simple enums
+
 /// General response from DISCORD.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct WrapperPacket {
@@ -146,7 +148,8 @@ pub struct UpdateStatusPacket {
     pub afk: bool,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+/// User status object
+#[derive(Debug)]
 pub enum Status {
     Online,
     Dnd,
@@ -154,6 +157,80 @@ pub enum Status {
     Invisible,
     Offline,
 }
+
+impl Into<String> for Status {
+    fn into(self) -> String {
+        match self {
+            Status::Online => "online".to_owned(),
+            Status::Dnd => "dnd".to_owned(),
+            Status::Idle => "idle".to_owned(),
+            Status::Invisible => "invisible".to_owned(),
+            Status::Offline => "offline".to_owned(),
+        }
+    }
+}
+
+impl Into<String> for &Status {
+    fn into(self) -> String {
+        match self {
+            Status::Online => "online".to_owned(),
+            Status::Dnd => "dnd".to_owned(),
+            Status::Idle => "idle".to_owned(),
+            Status::Invisible => "invisible".to_owned(),
+            Status::Offline => "offline".to_owned(),
+        }
+    }
+}
+
+// Has to be TryFrom, but it is unstable???
+impl From<&str> for Status {
+    fn from(value: &str) -> Self {
+        match value {
+            "online" => Status::Online,
+            "dnd" => Status::Dnd,
+            "idle" => Status::Idle,
+            "invisible" => Status::Invisible,
+            "offline" => Status::Offline,
+            _ => panic!("Unknown number for MessageActivityType {}", value),
+        }
+    }
+}
+
+impl Serialize for Status {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+    {
+        let x: String = self.into();
+        serializer.serialize_str(&x)
+    }
+}
+
+impl<'de> Deserialize<'de> for Status {
+    fn deserialize<D>(deserializer: D) -> Result<Status, D::Error>
+        where
+            D: Deserializer<'de>,
+    {
+        struct MyLittleVisitor;
+
+        impl<'de> Visitor<'de> for MyLittleVisitor {
+            type Value = Status;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("A string as <From Status>")
+            }
+
+            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+                where
+                    E: serde::de::Error,
+            {
+                Ok(Status::from(s))
+            }
+        }
+        deserializer.deserialize_str(MyLittleVisitor)
+    }
+}
+
 
 /// Opcodes of DISCORD protocol.
 #[derive(Debug)]

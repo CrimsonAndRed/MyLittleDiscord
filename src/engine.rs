@@ -97,6 +97,7 @@ impl Engine {
 
                 let msg = ClientMessage { data: packet };
 
+                // TODO send?
                 match wss_con.try_send(msg) {
                     Ok(_) => debug!("Succeeded delivering heartbeat message"),
                     Err(e) => error!("Failed to deliver heartbeat message: {}", e),
@@ -135,7 +136,7 @@ impl Engine {
             Some(t) => match t {
                 Event::MessageCreate => {
                     debug!("Something was written in chat!");
-                }
+                },
                 _ => info!("We do not care about {:?} event. Ignoring packet", t),
             },
         }
