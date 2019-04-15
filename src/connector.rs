@@ -48,7 +48,7 @@ impl StreamHandler<Message, ProtocolError> for WssConnector {
     fn handle(&mut self, msg: Message, ctx: &mut Context<Self>) {
         match msg {
             Message::Text(txt) => {
-                info!("Got msg {:?}", txt);
+                info!("Got packet {:?}", txt);
                 let json: serde_json::Result<WrapperPacket> = serde_json::from_str(&txt);
                 match json {
                     Err(e) => {

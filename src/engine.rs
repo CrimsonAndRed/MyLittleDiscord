@@ -13,7 +13,7 @@ pub struct Engine {
     /// Keep join point of heartbeat thread
     heartbeat_thread: Option<JoinHandle<()>>,
     /// Myself identifier
-    myself_id: Option<u64>,
+    myself_id: Option<Snowflake>,
 }
 
 impl Engine {
@@ -59,7 +59,7 @@ impl Engine {
         };
         let res = serde_json::to_value(&identity_packet);
         let hello_response = WrapperPacket {
-            op: OpCode::Identify.into(),
+            op: OpCode::Identify,
             // TODO no unwrap
             d: Some(res.unwrap()),
             s: None,
@@ -76,7 +76,7 @@ impl Engine {
             Err(e) => error!("Failed to deliver message: {}", e),
         };
         // Register scheduler for heartbeat
-        let p: HelloPacket = serde_json::from_value(content.d.unwrap()).unwrap();
+        let hello_packet: HelloPacket = serde_json::from_value(content.d.unwrap()).unwrap();
 
         debug!("Configured heartbeat packet");
 
@@ -84,12 +84,14 @@ impl Engine {
 
         let handle = std::thread::spawn(move || {
             loop {
-                std::thread::sleep(std::time::Duration::from_millis(p.heartbeat_interval));
+                std::thread::sleep(std::time::Duration::from_millis(
+                    hello_packet.heartbeat_interval,
+                ));
                 debug!("It is time to send heartbeat packet");
                 // No sync on heartbeat
                 // TODO solve it
                 let packet = WrapperPacket {
-                    op: OpCode::Heartbeat.into(),
+                    op: OpCode::Heartbeat,
                     d: None,
                     s: None,
                     t: None,
@@ -107,27 +109,27 @@ impl Engine {
 
         self.heartbeat_thread = Some(handle);
     }
-
-    /// Send heartbeat packet, acknowledging DISCORD that we are still alive.
-    fn heartbeat(&self) {
-        let packet = WrapperPacket {
-            op: OpCode::Heartbeat,
-            d: None,
-            s: None,
-            t: None,
-        };
-
-        let msg = ClientMessage { data: packet };
-
-        debug!("Configured heartbeat packet");
-
-        let wss_con = System::current().registry().get::<WssConnector>();
-        // TODO send?
-        match wss_con.try_send(msg) {
-            Ok(_) => debug!("Succeeded delivering heartbeat message"),
-            Err(e) => error!("Failed to deliver heartbeat message: {}", e),
-        }
-    }
+    //
+    //    /// Send heartbeat packet, acknowledging DISCORD that we are still alive.
+    //    fn heartbeat(&self) {
+    //        let packet = WrapperPacket {
+    //            op: OpCode::Heartbeat,
+    //            d: None,
+    //            s: None,
+    //            t: None,
+    //        };
+    //
+    //        let msg = ClientMessage { data: packet };
+    //
+    //        debug!("Configured heartbeat packet");
+    //
+    //        let wss_con = System::current().registry().get::<WssConnector>();
+    //        // TODO send?
+    //        match wss_con.try_send(msg) {
+    //            Ok(_) => debug!("Succeeded delivering heartbeat message"),
+    //            Err(e) => error!("Failed to deliver heartbeat message: {}", e),
+    //        }
+    //    }
 
     /// Literally all regular events happened on server side.
     fn dispatch(&mut self, content: WrapperPacket) {
@@ -136,6 +138,16 @@ impl Engine {
             Some(t) => match t {
                 Event::MessageCreate => {
                     debug!("Something was written in chat!");
+                    let message_packet: MessagePacket =
+                        serde_json::from_value(content.d.unwrap()).unwrap();
+                    debug!("The message is {:?}", message_packet);
+                }
+                Event::Ready => {
+                    debug!("Found Ready packet");
+                    let ready_packet: ReadyPacket =
+                        serde_json::from_value(content.d.unwrap()).unwrap();
+                    self.myself_id = Some(ready_packet.user.id);
+                    debug!("Myself id is {:?}", &self.myself_id);
                 }
                 _ => info!("We do not care about {:?} event. Ignoring packet", t),
             },
