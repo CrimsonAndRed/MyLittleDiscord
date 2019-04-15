@@ -3,11 +3,9 @@ use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashMap;
 use std::convert::{Into, TryFrom};
 
-/// This macro implements Serialize and Deserialize for c-like enums (java-like for me), that implements Into and From u8.
-// TODO same for str
+/// This macro implements Serialize and Deserialize for c-like enums (java-like for me), that implements Into and TryFrom u8.
 macro_rules! simple_serde_enum_to_u8 {
     ($impl_type:ty, $expected_text:expr) => {
-
         impl Serialize for $impl_type {
             fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
             where
@@ -43,7 +41,49 @@ macro_rules! simple_serde_enum_to_u8 {
                 deserializer.deserialize_u64(MyLittleVisitor)
             }
         }
-    }
+    };
+}
+
+/// This macro implements Serialize and Deserialize for enums, that implements Into and TryFrom str.
+macro_rules! simple_serde_enum_to_str {
+    ($impl_type:ty, $expected_text:expr) => {
+        impl Serialize for $impl_type {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: Serializer,
+            {
+                let x: String = self.into();
+                serializer.serialize_str(&x)
+            }
+        }
+
+        // serde_json only works with u64, i64 and f64
+        // so lets try to deserialize u64 and convert to u8
+        impl<'de> Deserialize<'de> for $impl_type {
+            fn deserialize<D>(deserializer: D) -> Result<$impl_type, D::Error>
+            where
+                D: Deserializer<'de>,
+            {
+                struct MyLittleVisitor;
+
+                impl<'de> Visitor<'de> for MyLittleVisitor {
+                    type Value = $impl_type;
+
+                    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                        formatter.write_str($expected_text)
+                    }
+
+                    fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
+                    where
+                        E: serde::de::Error,
+                    {
+                        <$impl_type>::try_from(s).map_err(serde::de::Error::custom)
+                    }
+                }
+                deserializer.deserialize_str(MyLittleVisitor)
+            }
+        }
+    };
 }
 
 /// General response from DISCORD.
@@ -239,40 +279,7 @@ impl TryFrom<&str> for Status {
     }
 }
 
-impl Serialize for Status {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let x: String = self.into();
-        serializer.serialize_str(&x)
-    }
-}
-
-impl<'de> Deserialize<'de> for Status {
-    fn deserialize<D>(deserializer: D) -> Result<Status, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct MyLittleVisitor;
-
-        impl<'de> Visitor<'de> for MyLittleVisitor {
-            type Value = Status;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("A string as <From Status>")
-            }
-
-            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Status::try_from(s).map_err(serde::de::Error::custom)
-            }
-        }
-        deserializer.deserialize_str(MyLittleVisitor)
-    }
-}
+simple_serde_enum_to_str!(Status, "Status name from DISCORD");
 
 /// Opcodes of DISCORD protocol.
 #[derive(Debug)]
@@ -350,42 +357,6 @@ impl TryFrom<u8> for OpCode {
 }
 
 simple_serde_enum_to_u8!(OpCode, "A number from 0 up to 11");
-
-//impl Serialize for OpCode {
-//    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//    where
-//        S: Serializer,
-//    {
-//        serializer.serialize_u8(self.into())
-//    }
-//}
-//
-//// serde_json only works with u64, i64 and f64
-//// so lets try to deserialize u64 and convert to u8
-//impl<'de> Deserialize<'de> for OpCode {
-//    fn deserialize<D>(deserializer: D) -> Result<OpCode, D::Error>
-//    where
-//        D: Deserializer<'de>,
-//    {
-//        struct MyLittleVisitor;
-//
-//        impl<'de> Visitor<'de> for MyLittleVisitor {
-//            type Value = OpCode;
-//
-//            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-//                formatter.write_str("A number from 0 up to 11")
-//            }
-//
-//            fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
-//            where
-//                E: serde::de::Error,
-//            {
-//                OpCode::try_from(s as u8).map_err(serde::de::Error::custom)
-//            }
-//        }
-//        deserializer.deserialize_u64(MyLittleVisitor)
-//    }
-//}
 
 impl Into<String> for Event {
     fn into(self) -> String {
@@ -516,41 +487,7 @@ impl TryFrom<&str> for Event {
         }
     }
 }
-
-impl Serialize for Event {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let x: String = self.into();
-        serializer.serialize_str(&x)
-    }
-}
-
-impl<'de> Deserialize<'de> for Event {
-    fn deserialize<D>(deserializer: D) -> Result<Event, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct MyLittleVisitor;
-
-        impl<'de> Visitor<'de> for MyLittleVisitor {
-            type Value = Event;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("A string as <From Event>")
-            }
-
-            fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
-            where
-                E: serde::de::Error,
-            {
-                Event::try_from(s).map_err(serde::de::Error::custom)
-            }
-        }
-        deserializer.deserialize_str(MyLittleVisitor)
-    }
-}
+simple_serde_enum_to_str!(Event, "Event name from DISCORD");
 
 /// Ready packet.
 /// Received when identification is completed.
@@ -945,42 +882,6 @@ impl TryFrom<u8> for MessageType {
 
 simple_serde_enum_to_u8!(MessageType, "A number from 0 up to 7");
 
-//impl Serialize for MessageType {
-//    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//    where
-//        S: Serializer,
-//    {
-//        serializer.serialize_u8(self.into())
-//    }
-//}
-//
-//// serde_json only works with u64, i64 and f64
-//// so lets try to deserialize u64 and convert to u8
-//impl<'de> Deserialize<'de> for MessageType {
-//    fn deserialize<D>(deserializer: D) -> Result<MessageType, D::Error>
-//    where
-//        D: Deserializer<'de>,
-//    {
-//        struct MyLittleVisitor;
-//
-//        impl<'de> Visitor<'de> for MyLittleVisitor {
-//            type Value = MessageType;
-//
-//            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-//                formatter.write_str("A number from 0 up to 7")
-//            }
-//
-//            fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
-//            where
-//                E: serde::de::Error,
-//            {
-//                MessageType::try_from(s as u8).map_err(serde::de::Error::custom)
-//            }
-//        }
-//        deserializer.deserialize_u64(MyLittleVisitor)
-//    }
-//}
-
 #[derive(Debug)]
 pub enum MessageActivityType {
     Join,
@@ -1028,39 +929,4 @@ impl TryFrom<u8> for MessageActivityType {
 }
 
 simple_serde_enum_to_u8!(MessageActivityType, "A number 1, 2, 3 or 5");
-//impl Serialize for MessageActivityType {
-//    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-//    where
-//        S: Serializer,
-//    {
-//        serializer.serialize_u8(self.into())
-//    }
-//}
-//
-//// serde_json only works with u64, i64 and f64
-//// so lets try to deserialize u64 and convert to u8
-//impl<'de> Deserialize<'de> for MessageActivityType {
-//    fn deserialize<D>(deserializer: D) -> Result<MessageActivityType, D::Error>
-//    where
-//        D: Deserializer<'de>,
-//    {
-//        struct MyLittleVisitor;
-//
-//        impl<'de> Visitor<'de> for MyLittleVisitor {
-//            type Value = MessageActivityType;
-//
-//            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-//                formatter.write_str("A number 1, 2, 3 or 5")
-//            }
-//
-//            fn visit_u64<E>(self, s: u64) -> Result<Self::Value, E>
-//            where
-//                E: serde::de::Error,
-//            {
-//                MessageActivityType::try_from(s as u8).map_err(serde::de::Error::custom)
-//            }
-//        }
-//        deserializer.deserialize_u64(MyLittleVisitor)
-//    }
-//}
 // TODO have to write structures for different messages
