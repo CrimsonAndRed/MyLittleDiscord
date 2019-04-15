@@ -38,7 +38,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
             .get::<RequestConnector>()
             .send(RequestMessage {
                 method: HttpMethod::GET,
-                url: "https://discordapp.com/api/v6/users/@me/guilds".to_owned(),
+                url: "/users/@me/guilds".to_owned(),
                 data: None,
             });
     let res = sys.block_on(guilds_future).unwrap();

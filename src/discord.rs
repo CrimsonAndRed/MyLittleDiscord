@@ -87,8 +87,8 @@ macro_rules! simple_serde_enum_to_str {
 }
 
 /// Snowflake is String in JSON representation, but it always has to be 64bit integer.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct Snowflake(String);
+#[derive(Debug, Serialize, Deserialize, PartialEq, Eq)]
+pub struct Snowflake(pub String);
 
 impl Into<u64> for &Snowflake {
     fn into(self) -> u64 {

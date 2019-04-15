@@ -1,10 +1,11 @@
 use log::{debug, error, info, warn};
 
-use crate::connector::{ClientMessage, WssConnector};
+use crate::connector::*;
 use crate::data::POOL;
 use crate::discord::*;
 use actix::*;
 use std::thread::JoinHandle;
+use serde_json::json;
 
 #[derive(Debug)]
 pub struct Engine {
@@ -35,7 +36,7 @@ impl Engine {
                 self.dispatch(content);
             }
             OpCode::HeartbeatACK => {
-                debug!("Heartbeat succeeded (recieved ACK)");
+                debug!("Heartbeat succeeded (received ACK)");
             }
             _ => warn!("I dont know yet how to respond to {:?}", &content.op),
         }
@@ -109,27 +110,6 @@ impl Engine {
 
         self.heartbeat_thread = Some(handle);
     }
-    //
-    //    /// Send heartbeat packet, acknowledging DISCORD that we are still alive.
-    //    fn heartbeat(&self) {
-    //        let packet = WrapperPacket {
-    //            op: OpCode::Heartbeat,
-    //            d: None,
-    //            s: None,
-    //            t: None,
-    //        };
-    //
-    //        let msg = ClientMessage { data: packet };
-    //
-    //        debug!("Configured heartbeat packet");
-    //
-    //        let wss_con = System::current().registry().get::<WssConnector>();
-    //        // TODO send?
-    //        match wss_con.try_send(msg) {
-    //            Ok(_) => debug!("Succeeded delivering heartbeat message"),
-    //            Err(e) => error!("Failed to deliver heartbeat message: {}", e),
-    //        }
-    //    }
 
     /// Literally all regular events happened on server side.
     fn dispatch(&mut self, content: WrapperPacket) {
@@ -138,9 +118,16 @@ impl Engine {
             Some(t) => match t {
                 Event::MessageCreate => {
                     debug!("Something was written in chat!");
-                    let message_packet: MessagePacket =
-                        serde_json::from_value(content.d.unwrap()).unwrap();
-                    debug!("The message is {:?}", message_packet);
+
+                    match &self.myself_id {
+                        None => warn!("I dont know who am i, so message was ignored"),
+                        Some(_) => {
+                            let message_packet: MessagePacket =
+                                serde_json::from_value(content.d.unwrap()).unwrap();
+                            debug!("The message is {:?}", &message_packet);
+                            self.on_text_message(message_packet);
+                        }
+                    }
                 }
                 Event::Ready => {
                     debug!("Found Ready packet");
@@ -152,5 +139,41 @@ impl Engine {
                 _ => info!("We do not care about {:?} event. Ignoring packet", t),
             },
         }
+    }
+
+    fn on_text_message(&mut self, message_packet: MessagePacket) {
+        let my_mention = self.myself_id.as_ref().unwrap();
+        let was_mentioned = message_packet.mentions.iter().any(|i| i.id.eq(my_mention));
+        if !was_mentioned {
+            debug!("I was not mentioned. Ignoring packet");
+            return;
+        }
+
+        let my_mention = format!("<@{}>", my_mention.0);
+        debug!("My mention is: {}", &my_mention);
+        let mention_index = &message_packet.content.find(&my_mention);
+        if mention_index.is_none() {
+            warn!("Found myself in <mentions>, but could not detect myself in message text. Ignoring packet.");
+            return;
+        }
+
+        let mention_index = mention_index.unwrap();
+        let content = &message_packet.content[mention_index+my_mention.len()..];
+        debug!("Content is: {}", content);
+
+        // Respond with same text
+        let channel_id = &message_packet.channel_id.0;
+        let req_con = System::current().registry().get::<RequestConnector>();
+        let msg = RequestMessage {
+            method: HttpMethod::POST,
+            url: format!("/channels/{}/messages", channel_id),
+            data: Some(json!({
+                "content": content,
+                "tts": false
+            })),
+        };
+
+        let res = req_con.try_send(msg);
+        debug!("Message was sent to DISCORD?");
     }
 }

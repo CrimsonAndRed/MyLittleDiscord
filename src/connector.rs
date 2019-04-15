@@ -112,7 +112,7 @@ impl Handler<RequestMessage> for RequestConnector {
     type Result = Box<dyn Future<Item = serde_json::Value, Error = actix_web::error::Error>>;
 
     fn handle(&mut self, msg: RequestMessage, ctx: &mut Context<Self>) -> Self::Result {
-        let url = &msg.url;
+        let url = &format!("https://discordapp.com/api/v6{}", &msg.url);
         let mut req = match &msg.method {
             HttpMethod::GET => client::get(url),
             HttpMethod::POST => client::post(url),
