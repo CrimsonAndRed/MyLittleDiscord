@@ -5,7 +5,6 @@ use crate::data::POOL;
 use crate::discord::*;
 use actix::*;
 use std::thread::JoinHandle;
-use serde_json::json;
 
 #[derive(Debug)]
 pub struct Engine {
@@ -142,14 +141,21 @@ impl Engine {
     }
 
     fn on_text_message(&mut self, message_packet: MessagePacket) {
-        let my_mention = self.myself_id.as_ref().unwrap();
-        let was_mentioned = message_packet.mentions.iter().any(|i| i.id.eq(my_mention));
+        let author = message_packet.author.id;
+        let myself_id = self.myself_id.as_ref().unwrap();
+
+        if author.eq(myself_id) {
+            debug!("My own message. Ignoring packet");
+            return;
+        }
+
+        let was_mentioned = message_packet.mentions.iter().any(|i| i.id.eq(myself_id));
         if !was_mentioned {
             debug!("I was not mentioned. Ignoring packet");
             return;
         }
 
-        let my_mention = format!("<@{}>", my_mention.0);
+        let my_mention = format!("<@{}>", myself_id.0);
         debug!("My mention is: {}", &my_mention);
         let mention_index = &message_packet.content.find(&my_mention);
         if mention_index.is_none() {
@@ -164,13 +170,13 @@ impl Engine {
         // Respond with same text
         let channel_id = &message_packet.channel_id.0;
         let req_con = System::current().registry().get::<RequestConnector>();
+        let author_id = &author.0;
+
+        let request_data = serde_json::to_value(MessageRequestPacket::simple_text(&format!("<@{}> {}", author_id, content))).unwrap();
         let msg = RequestMessage {
             method: HttpMethod::POST,
             url: format!("/channels/{}/messages", channel_id),
-            data: Some(json!({
-                "content": content,
-                "tts": false
-            })),
+            data: Some(request_data),
         };
 
         let res = req_con.try_send(msg);

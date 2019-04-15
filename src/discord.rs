@@ -939,4 +939,35 @@ impl TryFrom<u8> for MessageActivityType {
 }
 
 simple_serde_enum_to_u8!(MessageActivityType, "A number 1, 2, 3 or 5");
-// TODO have to write structures for different messages
+// TODO have to write structures for different events
+
+// Requests
+/// Create my own messages
+#[derive(Debug, Serialize)]
+pub struct MessageRequestPacket {
+    /// Text content of message
+    pub content: Option<String>,
+    /// Nonce that can be used for optinistic message sending
+    pub nonce: Option<Snowflake>,
+    /// true if it is TTS message
+    pub tts: bool,
+    /// content of file being sent
+    pub file: Option<Vec<u8>>,
+    /// embedded rich text
+    pub embed: Option<EmbedPacket>,
+    /// JSON encoded
+    pub payload_json: Option<serde_json::Value>,
+}
+
+impl MessageRequestPacket {
+    pub fn simple_text(text: &str) -> Self {
+        MessageRequestPacket {
+            content: Some(text.to_string()),
+            nonce: None,
+            tts: false,
+            file: None,
+            embed: None,
+            payload_json: None,
+        }
+    }
+}
