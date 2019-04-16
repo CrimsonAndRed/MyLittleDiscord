@@ -4,6 +4,7 @@ use crate::connector::*;
 use crate::data::POOL;
 use crate::discord::*;
 use actix::*;
+use futures::Future;
 use std::thread::JoinHandle;
 
 #[derive(Debug)]
@@ -58,10 +59,17 @@ impl Engine {
             presence: None,
         };
         let res = serde_json::to_value(&identity_packet);
+
+        let res = res.unwrap_or_else(|e| {
+            panic!(
+                "Failed to serialize IdentityPacket to respond to hello packet: {}",
+                e
+            )
+        });
+
         let hello_response = WrapperPacket {
             op: OpCode::Identify,
-            // TODO no unwrap
-            d: Some(res.unwrap()),
+            d: Some(res),
             s: None,
             t: None,
         };
@@ -70,11 +78,24 @@ impl Engine {
             data: hello_response,
         };
         let wss_con = System::current().registry().get::<WssConnector>();
+        Arbiter::spawn({
+            wss_con
+                .send(msg)
+                .map_err(|e| {
+                    error!("Something bad happened on sending request: {}", e);
+                    ()
+                })
+                .map(|m| {
+                    debug!("Result of delivery to wss_con is {:?}", &m);
+                    ()
+                })
+        });
+        debug!("After Arbiter");
         // TODO send?
-        match wss_con.try_send(msg) {
-            Ok(_) => debug!("Succeeded delivering message"),
-            Err(e) => error!("Failed to deliver message: {}", e),
-        };
+        //        match wss_con.try_send(msg) {
+        //            Ok(_) => debug!("Succeeded delivering message"),
+        //            Err(e) => error!("Failed to deliver message: {}", e),
+        //        };
         // Register scheduler for heartbeat
         let hello_packet: HelloPacket = serde_json::from_value(content.d.unwrap()).unwrap();
 
@@ -89,7 +110,7 @@ impl Engine {
                 ));
                 debug!("It is time to send heartbeat packet");
                 // No sync on heartbeat
-                // TODO solve it
+                // Whatever, it works stable enough
                 let packet = WrapperPacket {
                     op: OpCode::Heartbeat,
                     d: None,
@@ -164,7 +185,7 @@ impl Engine {
         }
 
         let mention_index = mention_index.unwrap();
-        let content = &message_packet.content[mention_index+my_mention.len()..];
+        let content = &message_packet.content[mention_index + my_mention.len()..];
         debug!("Content is: {}", content);
 
         // Respond with same text
@@ -172,7 +193,11 @@ impl Engine {
         let req_con = System::current().registry().get::<RequestConnector>();
         let author_id = &author.0;
 
-        let request_data = serde_json::to_value(MessageRequestPacket::simple_text(&format!("<@{}> {}", author_id, content))).unwrap();
+        let request_data = serde_json::to_value(MessageRequestPacket::simple_text(&format!(
+            "<@{}> {}",
+            author_id, content
+        )))
+        .unwrap();
         let msg = RequestMessage {
             method: HttpMethod::POST,
             url: format!("/channels/{}/messages", channel_id),

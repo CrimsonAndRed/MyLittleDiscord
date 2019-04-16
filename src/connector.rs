@@ -175,8 +175,8 @@ impl Handler<ClientMessage> for WssConnector {
         let json = serde_json::to_string(&msg.data);
         match json {
             Ok(json) => {
+                // WsClient does not have methods, that return futures or results over message delivery fact?
                 self.writer.text(json);
-                // TODO acknowledge that message was received?
                 Ok(())
             }
             Err(e) => {

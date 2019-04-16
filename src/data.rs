@@ -25,7 +25,7 @@ impl Pool {
     fn get_wss_ref() -> String {
         // It is an option to ask DISCORD for wss address
         // But it creates cyclic dependencies between POOL, RequestConnector and ActorsPool
-        "wss://gateway.discord.gg/?v=6&encoding=json".to_string()
+        "wss://gateway.discord.gg/?v=6&encoding=json".to_owned()
     }
 
     fn get_secure_key() -> String {
