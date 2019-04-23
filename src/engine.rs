@@ -86,7 +86,7 @@ impl Engine {
                     ()
                 })
                 .map(|m| {
-                    debug!("Result of delivery to wss_con is {:?}", &m);
+                    debug!("Succeeded delivering to WssConnector");
                     ()
                 })
         });
@@ -103,6 +103,7 @@ impl Engine {
 
         let wss_con = System::current().registry().get::<WssConnector>();
 
+        // TODO This has to be done with AsyncContext run_interval?
         let handle = std::thread::spawn(move || {
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(
@@ -131,7 +132,7 @@ impl Engine {
         self.heartbeat_thread = Some(handle);
     }
 
-    /// Literally all regular events happened on server side.
+    /// Literally all regular events that happened on server side.
     fn dispatch(&mut self, content: WrapperPacket) {
         match &content.t {
             None => debug!("There was no \"t\" parameter in Dispatch event. Ignoring packet"),
@@ -205,6 +206,6 @@ impl Engine {
         };
 
         let res = req_con.try_send(msg);
-        debug!("Message was sent to DISCORD?");
+        debug!("Message was sent to DISCORD? {:?}", res);
     }
 }

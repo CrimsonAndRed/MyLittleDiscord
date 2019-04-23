@@ -153,7 +153,10 @@ pub struct RequestMessage {
 }
 
 impl actix::Message for RequestMessage {
-    // WHY??
+    // Now i got why
+    // Actix executes futures inside its core
+    // So i dont have to worry about it
+    // Pretty good
     type Result = std::result::Result<serde_json::Value, actix_web::Error>;
 }
 
@@ -176,6 +179,7 @@ impl Handler<ClientMessage> for WssConnector {
         match json {
             Ok(json) => {
                 // WsClient does not have methods, that return futures or results over message delivery fact?
+                // Still strange for me
                 self.writer.text(json);
                 Ok(())
             }

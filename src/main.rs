@@ -32,7 +32,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
     });
 
     // Just for test
-    let guilds_future =
+    Arbiter::spawn({
         System::current()
             .registry()
             .get::<RequestConnector>()
@@ -40,9 +40,16 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 method: HttpMethod::GET,
                 url: "/users/@me/guilds".to_owned(),
                 data: None,
-            });
-    let res = sys.block_on(guilds_future).unwrap();
-    debug!("Guilds future returned: {:?}", res);
+            })
+            .map_err(|e| {
+                error!("Got error {}", e);
+                ()
+            })
+            .map(|msg| {
+                debug!("Guilds future returned: {:?}", msg);
+                ()
+            })
+    });
 
     debug!("Starting arbiter");
     Arbiter::spawn({

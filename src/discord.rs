@@ -273,7 +273,6 @@ impl Into<String> for &Status {
     }
 }
 
-// Has to be TryFrom, but it is unstable???
 impl TryFrom<&str> for Status {
     type Error = String;
 
@@ -344,7 +343,6 @@ impl Into<u8> for &OpCode {
     }
 }
 
-// Has to be TryFrom, but it is unstable???
 impl TryFrom<u8> for OpCode {
     type Error = String;
 
@@ -923,7 +921,6 @@ impl Into<u8> for &MessageActivityType {
     }
 }
 
-// Has to be TryFrom, but it is unstable???
 impl TryFrom<u8> for MessageActivityType {
     type Error = String;
 
@@ -947,7 +944,7 @@ simple_serde_enum_to_u8!(MessageActivityType, "A number 1, 2, 3 or 5");
 pub struct MessageRequestPacket {
     /// Text content of message
     pub content: Option<String>,
-    /// Nonce that can be used for optinistic message sending
+    /// Nonce that can be used for optimistic message sending
     pub nonce: Option<Snowflake>,
     /// true if it is TTS message
     pub tts: bool,
