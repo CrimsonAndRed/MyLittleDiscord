@@ -232,8 +232,8 @@ impl Engine {
                             .map_err(actix_web::error::Error::from)
                     })
                     .map(move |body| {
-                        //                        debug!("Response is: {:?}", body);
-                        let mut file = std::fs::File::create(&name).unwrap();
+                        let curr_time = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).unwrap().as_millis();
+                        let mut file = std::fs::File::create(&format!("files/{}_{}", &curr_time, &name)).unwrap();
                         let res = file.write_all(body.as_ref());
                         debug!("Result of writing to file is {:?}", res);
                         ()
