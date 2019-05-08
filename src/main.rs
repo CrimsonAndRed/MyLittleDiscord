@@ -27,6 +27,10 @@ fn main() -> Result<(), Box<std::error::Error>> {
     let p: &data::Pool = &data::POOL;
     debug!("Done with pool");
 
+    debug!("Starting files folder check");
+    create_files_folder()?;
+    debug!("Finished files folder");
+
     let addr = register_actor(RequestConnector {
         key_header: format!("Bot {}", &p.key),
     });
@@ -62,6 +66,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
                 ()
             })
             .map(|(reader, writer)| {
+                // Black magic from tutorial
                 let addr = WssConnector::create(|ctx| {
                     WssConnector::add_stream(reader, ctx);
                     WssConnector {
@@ -88,4 +93,11 @@ fn register_actor<A: SystemService>(actor: A) -> Addr<A> {
     let addr = actor.start();
     System::current().registry().set(addr.clone());
     addr
+}
+
+/// Creates folder for files.
+fn create_files_folder() -> std::io::Result<()> {
+    let mut dir = std::env::current_dir()?;
+    dir.push("files");
+    std::fs::create_dir_all(dir)
 }

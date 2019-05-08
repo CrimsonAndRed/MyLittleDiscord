@@ -63,9 +63,6 @@ impl StreamHandler<Message, ProtocolError> for WssConnector {
             Message::Close(e) => {
                 warn!("Received close message from DISCORD, with reason {:?}", &e);
                 warn!("Closing connection and exitting");
-                // self.writer.close(e);
-                // Do we need to wait??
-                System::current().stop();
             }
             Message::Ping(d) => {
                 info!("Received ping message from DISCORD, with text {}", &d);
@@ -87,6 +84,7 @@ impl StreamHandler<Message, ProtocolError> for WssConnector {
 
     fn finished(&mut self, ctx: &mut Context<Self>) {
         debug!("Finished");
+        System::current().stop();
     }
 }
 
@@ -148,11 +146,29 @@ impl Handler<RequestMessage> for RequestConnector {
 #[derive(Debug)]
 pub struct RequestMessage {
     pub method: HttpMethod,
+    /// Must be with leading '/'
     pub url: String,
     pub data: Option<serde_json::Value>,
 }
 
 impl actix::Message for RequestMessage {
+    // Now i got why
+    // Actix executes futures inside its core
+    // So i dont have to worry about it
+    // Pretty good
+    type Result = std::result::Result<serde_json::Value, actix_web::Error>;
+}
+
+/// Message to get some information from DISCORD REST API.
+#[derive(Debug)]
+pub struct FileRequestMessage {
+    pub method: HttpMethod,
+    /// Must be with leading '/'
+    pub url: String,
+    pub data: Option<serde_json::Value>,
+}
+
+impl actix::Message for FileRequestMessage {
     // Now i got why
     // Actix executes futures inside its core
     // So i dont have to worry about it

@@ -4,7 +4,12 @@ use crate::connector::*;
 use crate::data::POOL;
 use crate::discord::*;
 use actix::*;
+use actix_web::client;
+use actix_web::multipart::*;
+use actix_web::HttpMessage;
+use futures::stream::Stream;
 use futures::Future;
+use std::io::Write;
 use std::thread::JoinHandle;
 
 #[derive(Debug)]
@@ -146,7 +151,8 @@ impl Engine {
                             let message_packet: MessagePacket =
                                 serde_json::from_value(content.d.unwrap()).unwrap();
                             debug!("The message is {:?}", &message_packet);
-                            self.on_text_message(message_packet);
+                            self.on_text_message(&message_packet);
+                            self.inspect_file(&message_packet)
                         }
                     }
                 }
@@ -162,8 +168,8 @@ impl Engine {
         }
     }
 
-    fn on_text_message(&mut self, message_packet: MessagePacket) {
-        let author = message_packet.author.id;
+    fn on_text_message(&mut self, message_packet: &MessagePacket) {
+        let author = &message_packet.author.id;
         let myself_id = self.myself_id.as_ref().unwrap();
 
         if author.eq(myself_id) {
@@ -207,5 +213,40 @@ impl Engine {
 
         let res = req_con.try_send(msg);
         debug!("Message was sent to DISCORD? {:?}", res);
+    }
+
+    fn inspect_file(&mut self, message_packet: &MessagePacket) {
+        if !message_packet.attachments.is_empty() {
+            debug!("Found some attachments");
+            for att in &message_packet.attachments {
+                let name = att.filename.clone();
+                let url = &att.url;
+                debug!("File is {} from {}", name, url);
+
+                let f = client::get(url).finish().unwrap().send();
+                let f = f
+                    .map_err(actix_web::error::Error::from)
+                    .and_then(|resp| {
+                        resp.body()
+                            .limit(100 * 1024 * 1024)
+                            .map_err(actix_web::error::Error::from)
+                    })
+                    .map(move |body| {
+                        //                        debug!("Response is: {:?}", body);
+                        let mut file = std::fs::File::create(&name).unwrap();
+                        let res = file.write_all(body.as_ref());
+                        debug!("Result of writing to file is {:?}", res);
+                        ()
+                    })
+                    .map_err(|e| {
+                        error!("Error happened {}", e);
+                        ()
+                    });
+                Arbiter::spawn(f);
+                //                tokio::spawn(f);
+            }
+        } else {
+            debug!("No attachments found");
+        }
     }
 }
