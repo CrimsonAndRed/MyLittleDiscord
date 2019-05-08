@@ -1,7 +1,7 @@
 use lazy_static::lazy_static;
 use log::info;
 
-const WSS_ADDRESS_LINK: &'static str = "https://discordapp.com/api/v6/gateway";
+//const WSS_ADDRESS_LINK: &'static str = "https://discordapp.com/api/v6/gateway";
 const EXPECTED_ARGUMENTS: usize = 2;
 
 lazy_static! {

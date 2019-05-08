@@ -19,7 +19,7 @@ mod discord;
 mod engine;
 
 fn main() -> Result<(), Box<std::error::Error>> {
-    let mut sys = actix::System::new("my-little-discord");
+    let sys = actix::System::new("my-little-discord");
 
     log4rs::init_file("conf/log4rs.yaml", Default::default())?;
 
@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
     create_files_folder()?;
     debug!("Finished files folder");
 
-    let addr = register_actor(RequestConnector {
+    let _addr = register_actor(RequestConnector {
         key_header: format!("Bot {}", &p.key),
     });
 

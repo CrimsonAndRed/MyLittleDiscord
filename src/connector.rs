@@ -28,11 +28,11 @@ impl Default for WssConnector {
 impl Actor for WssConnector {
     type Context = Context<Self>;
 
-    fn started(&mut self, ctx: &mut Context<Self>) {
+    fn started(&mut self, _ctx: &mut Context<Self>) {
         debug!("Started MyLittleConnection");
     }
 
-    fn stopped(&mut self, ctx: &mut Context<Self>) {
+    fn stopped(&mut self, _ctx: &mut Context<Self>) {
         debug!("Stopped MyLittleConnection");
     }
 }
@@ -45,7 +45,7 @@ impl actix::Supervised for WssConnector {}
 impl SystemService for WssConnector {}
 
 impl StreamHandler<Message, ProtocolError> for WssConnector {
-    fn handle(&mut self, msg: Message, ctx: &mut Context<Self>) {
+    fn handle(&mut self, msg: Message, _ctx: &mut Context<Self>) {
         match msg {
             Message::Text(txt) => {
                 info!("Got packet {:?}", txt);
@@ -78,11 +78,11 @@ impl StreamHandler<Message, ProtocolError> for WssConnector {
         }
     }
 
-    fn started(&mut self, ctx: &mut Context<Self>) {
+    fn started(&mut self, _ctx: &mut Context<Self>) {
         debug!("Connected");
     }
 
-    fn finished(&mut self, ctx: &mut Context<Self>) {
+    fn finished(&mut self, _ctx: &mut Context<Self>) {
         debug!("Finished");
         System::current().stop();
     }
@@ -109,7 +109,7 @@ impl SystemService for RequestConnector {}
 impl Handler<RequestMessage> for RequestConnector {
     type Result = Box<dyn Future<Item = serde_json::Value, Error = actix_web::error::Error>>;
 
-    fn handle(&mut self, msg: RequestMessage, ctx: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, msg: RequestMessage, _ctx: &mut Context<Self>) -> Self::Result {
         let url = &format!("https://discordapp.com/api/v6{}", &msg.url);
         let mut req = match &msg.method {
             HttpMethod::GET => client::get(url),
@@ -188,7 +188,7 @@ impl actix::Message for ClientMessage {
 impl Handler<ClientMessage> for WssConnector {
     type Result = Result<(), actix_web::error::Error>;
 
-    fn handle(&mut self, mut msg: ClientMessage, ctx: &mut Context<Self>) -> Self::Result {
+    fn handle(&mut self, mut msg: ClientMessage, _ctx: &mut Context<Self>) -> Self::Result {
         debug!("Sending client message to DISCORD: {:?}", msg.data);
         std::mem::replace(&mut msg.data.s, self.last_sequence);
         let json = serde_json::to_string(&msg.data);

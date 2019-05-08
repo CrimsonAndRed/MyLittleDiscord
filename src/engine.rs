@@ -5,7 +5,6 @@ use crate::data::POOL;
 use crate::discord::*;
 use actix::*;
 use actix_web::client;
-use actix_web::multipart::*;
 use actix_web::HttpMessage;
 use futures::stream::Stream;
 use futures::Future;
