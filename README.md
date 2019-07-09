@@ -1,6 +1,10 @@
 # MyLittleDiscord
 My Little Discord bot
 
+## What can i do?
+* Pong text message, that uses "@" bot mention
+* Save all files from all channels
+
 ## Compilation
 Can be compiled with stable Rust version 1.34+.
 
